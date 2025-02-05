@@ -4,7 +4,7 @@
     "idf.openOcdConfigs": [
         "board/esp32c6-builtin.cfg"
     ],
-    "idf.port": "/dev/ttyACM0",
+    "idf.port": "/dev/ttyUSB0",
     "idf.toolsPath": "/root/.espressif",
     "idf.flashType": "JTAG"
 }

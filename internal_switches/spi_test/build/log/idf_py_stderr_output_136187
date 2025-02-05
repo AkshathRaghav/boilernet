@@ -1,0 +1,69 @@
+[0;33m--- esp-idf-monitor 1.5.0 on /dev/ttyUSB0 115200[0m
+[0;33m--- Quit: Ctrl+] | Menu: Ctrl+T | Help: Ctrl+T followed by Ctrl+H[0m
+[0;33m--- Stack dump detected[0m
+[0;33m--- 0x408009ae: panic_abort at /root/esp/v5.4/esp-idf/components/esp_system/panic.c:468
+0x40805ea0: __ubsan_include at /root/esp/v5.4/esp-idf/components/esp_system/ubsan.c:311
+[0m
+[0;33m--- 0x40800001: _vector_table at /root/esp/v5.4/esp-idf/components/riscv/vectors_intc.S:54
+[0m
+[0;33m
+--- Backtrace:
+
+[0m
+[0;33m--- 0x4001975a: software_reset_cpu in ROM
+[0m
+[0;33m--- Stack dump detected[0m
+[0;33m--- 0x408009ae: panic_abort at /root/esp/v5.4/esp-idf/components/esp_system/panic.c:468
+0x40805ea0: __ubsan_include at /root/esp/v5.4/esp-idf/components/esp_system/ubsan.c:311
+[0m
+[0;33m--- 0x40800001: _vector_table at /root/esp/v5.4/esp-idf/components/riscv/vectors_intc.S:54
+[0m
+[0;33m
+--- Backtrace:
+
+[0m
+[0;33m--- 0x4001975a: software_reset_cpu in ROM
+[0m
+[0;33m--- Stack dump detected[0m
+[0;33m--- 0x408009ae: panic_abort at /root/esp/v5.4/esp-idf/components/esp_system/panic.c:468
+0x40805ea0: __ubsan_include at /root/esp/v5.4/esp-idf/components/esp_system/ubsan.c:311
+[0m
+[0;33m--- 0x40800001: _vector_table at /root/esp/v5.4/esp-idf/components/riscv/vectors_intc.S:54
+[0m
+[0;33m
+--- Backtrace:
+
+[0m
+[0;33m--- 0x4001975a: software_reset_cpu in ROM
+[0m
+[0;33m--- Stack dump detected[0m
+[0;33m--- 0x408009ae: panic_abort at /root/esp/v5.4/esp-idf/components/esp_system/panic.c:468
+0x40805ea0: __ubsan_include at /root/esp/v5.4/esp-idf/components/esp_system/ubsan.c:311
+[0m
+[0;33m--- 0x40800001: _vector_table at /root/esp/v5.4/esp-idf/components/riscv/vectors_intc.S:54
+[0m
+[0;33m
+--- Backtrace:
+
+[0m
+[0;33m--- 0x4001975a: software_reset_cpu in ROM
+[0m
+[0;33m--- Stack dump detected[0m
+[0;33m--- 0x408009ae: panic_abort at /root/esp/v5.4/esp-idf/components/esp_system/panic.c:468
+0x40805ea0: __ubsan_include at /root/esp/v5.4/esp-idf/components/esp_system/ubsan.c:311
+[0m
+[0;33m--- 0x40800001: _vector_table at /root/esp/v5.4/esp-idf/components/riscv/vectors_intc.S:54
+[0m
+[0;33m
+--- Backtrace:
+
+[0m
+[0;33m--- 0x4001975a: software_reset_cpu in ROM
+[0m
+[0;33m--- Stack dump detected[0m
+[0;33m--- 0x408009ae: panic_abort at /root/esp/v5.4/esp-idf/components/esp_system/panic.c:468
+0x40805ea0: __ubsan_include at /root/esp/v5.4/esp-idf/components/esp_system/ubsan.c:311
+[0m
+[0;33m--- 0x40800001: _vector_table at /root/esp/v5.4/esp-idf/components/riscv/vectors_intc.S:54
+[0m
+[0m
