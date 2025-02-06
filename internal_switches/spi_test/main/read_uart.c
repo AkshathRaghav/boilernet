@@ -12,17 +12,15 @@
 // Define GPIO for LED
 #define LED_GPIO 18        // LED connected to GPIO 18
 #define UART_NUM UART_NUM_0 // Use UART0 over USB
-#define UART_LOG UART_NUM_1 // Use UART0 over USB
 #define BUF_SIZE 1024
 
 void UartInit(void);
 void led_init(void);
+const char *TAG = "UART";
 
 void UartInit(void) {
-    const char *TAG = "UART";
-    esp_log_level_set(TAG, ESP_LOG_INFO);
+    esp_log_level_set("UART", ESP_LOG_WARN);  // Show only warnings/errors
 
-    // UART configuration
     uart_config_t uart_config = {
         .baud_rate = 115200,
         .data_bits = UART_DATA_8_BITS,
@@ -31,15 +29,12 @@ void UartInit(void) {
         .flow_ctrl = UART_HW_FLOWCTRL_DISABLE
     };
 
-    // Apply UART configuration
-    ESP_ERROR_CHECK(uart_param_config(UART_LOG, &uart_config));
+    ESP_ERROR_CHECK(uart_param_config(UART_NUM, &uart_config));
 
-    // Set UART pins (keeping default USB-UART)
-    ESP_ERROR_CHECK(uart_set_pin(UART_LOG, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE,
+    ESP_ERROR_CHECK(uart_set_pin(UART_NUM, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE,
                                  UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
 
-    // Install UART driver
-    ESP_ERROR_CHECK(uart_driver_install(UART_LOG, BUF_SIZE, BUF_SIZE, 0, NULL, 0));
+    ESP_ERROR_CHECK(uart_driver_install(UART_NUM, BUF_SIZE * 2, 0, 0, NULL, 0));
 }
 
 // Initialize LED GPIO
@@ -64,19 +59,15 @@ void app_main() {
         int len = uart_read_bytes(UART_NUM, data, BUF_SIZE - 1, 100 / portTICK_PERIOD_MS);
         if (len > 0) {
             data[len] = '\0';  // Null-terminate for string processing
-            // ESP_LOGI("UART", "Received %d bytes: %s", len, data);
-            // ESP_LOGI("UART", "Received %d bytes", len);
-
-            // Turn on LED when data is received
+            
             gpio_set_level(LED_GPIO, 1);
             vTaskDelay(pdMS_TO_TICKS(500));  // Keep LED on for 500ms
             gpio_set_level(LED_GPIO, 0);
 
-            // Basic verification (e.g., checking if it contains "ESP32")
             if (strstr((char *)data, "ESP32") != NULL) {
-                send_response("ACK\n");  // Send acknowledgment
+                send_response("ACKK\0");  
             } else {
-                send_response("NACK\n");  // Send negative acknowledgment
+                send_response("NACK\0"); 
             }
         }
 

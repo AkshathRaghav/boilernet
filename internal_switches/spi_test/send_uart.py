@@ -6,25 +6,24 @@ ser = serial.Serial('/dev/ttyUSB0', 115200, timeout=2)
 
 try:
     while True:
-        # Send data to ESP32
-        data_out = b"ESP32!\n"
+        # Send data to ESP32 (ensure it matches what ESP32 expects)
+        data_out = b"ESP32\n"  # No '!' to match ESP32 checking for "ESP32"
         ser.write(data_out)
         print(f"Sent: {data_out.decode().strip()}")
 
-        # Wait for exactly 4-character response ("ACK\n" or "NACK\n")
-        response = b""  # Initialize empty buffer
+        response = b""  
         while len(response) < 4:
             chunk = ser.read(1)  # Read one byte at a time
             if chunk:
                 response += chunk
+                print(f"Received chunk: {chunk.decode()}")  # Log the chunk received
             else:
-                break  # Timeout reached
+                break  
 
         if len(response) == 4:
             decoded_response = response.decode().strip()
-            print(f"Received: {decoded_response}")
+            print(f"Full response received: {decoded_response}")
 
-            # Process response
             if decoded_response == "ACK":
                 print("Completed!")
                 break
