@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "esp-idf/mbedtls/mbedtls/pkgconfig",
+		"source" : "/root/esp/v5.4/esp-idf/components/mbedtls/mbedtls/pkgconfig"
+	}
+}

@@ -1,0 +1,2 @@
+/root/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20241119/riscv32-esp-elf/bin/riscv32-esp-elf-ar qc libsd_card.a CMakeFiles/__idf_sd_card.dir/sd_test_io.c.obj
+/root/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20241119/riscv32-esp-elf/bin/riscv32-esp-elf-ranlib libsd_card.a

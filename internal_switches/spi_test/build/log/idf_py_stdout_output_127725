@@ -1,0 +1,77 @@
+ESP-ROM:esp32c6-20220919
+Build:Sep 19 2022
+rst:0x1 (POWERON),boot:0x6c (SPI_FAST_FLASH_BOOT)
+SPIWP:0xee
+mode:DIO, clock div:2
+load:0x40875720,len:0x19cc
+load:0x4086c110,len:0xe84
+load:0x4086e610,len:0x304c
+entry 0x4086c11a
+[0;32mI (23) boot: ESP-IDF v5.4-dirty 2nd stage bootloader[0m
+[0;32mI (24) boot: compile time Feb  4 2025 23:46:49[0m
+[0;32mI (24) boot: chip revision: v0.1[0m
+[0;32mI (27) boot: efuse block revision: v0.2[0m
+[0;32mI (31) boot.esp32c6: SPI Speed      : 80MHz[0m
+[0;32mI (36) boot.esp32c6: SPI Mode       : DIO[0m
+[0;32mI (41) boot.esp32c6: SPI Flash Size : 2MB[0m
+[0;32mI (46) boot: Enabling RNG early entropy source...[0m
+[0;32mI (51) boot: Partition Table:[0m
+[0;32mI (55) boot: ## Label            Usage          Type ST Offset   Length[0m
+[0;32mI (62) boot:  0 nvs              WiFi data        01 02 00009000 00006000[0m
+[0;32mI (69) boot:  1 phy_init         RF data          01 01 0000f000 00001000[0m
+[0;32mI (77) boot:  2 factory          factory app      00 00 00010000 00100000[0m
+[0;32mI (84) boot: End of partition table[0m
+[0;32mI (89) esp_image: segment 0: paddr=00010020 vaddr=42028020 size=0c200h ( 49664) map[0m
+[0;32mI (106) esp_image: segment 1: paddr=0001c228 vaddr=40800000 size=03df0h ( 15856) load[0m
+[0;32mI (110) esp_image: segment 2: paddr=00020020 vaddr=42000020 size=240dch (147676) map[0m
+[0;32mI (141) esp_image: segment 3: paddr=00044104 vaddr=40803df0 size=09f00h ( 40704) load[0m
+[0;32mI (150) esp_image: segment 4: paddr=0004e00c vaddr=4080dcf0 size=01738h (  5944) load[0m
+[0;32mI (156) boot: Loaded app from partition at offset 0x10000[0m
+[0;32mI (156) boot: Disabling RNG early entropy source...[0m
+[0;32mI (171) cpu_start: Unicore app[0m
+[0;32mI (179) cpu_start: Pro cpu start user code[0m
+[0;32mI (180) cpu_start: cpu freq: 160000000 Hz[0m
+[0;32mI (180) app_init: Application information:[0m
+[0;32mI (180) app_init: Project name:     spi_test[0m
+[0;32mI (184) app_init: App version:      2f7eebc-dirty[0m
+[0;32mI (188) app_init: Compile time:     Feb  6 2025 20:32:48[0m
+[0;32mI (193) app_init: ELF file SHA256:  a64355009...[0m
+[0;32mI (197) app_init: ESP-IDF:          v5.4-dirty[0m
+[0;32mI (201) efuse_init: Min chip rev:     v0.0[0m
+[0;32mI (205) efuse_init: Max chip rev:     v0.99 [0m
+[0;32mI (209) efuse_init: Chip rev:         v0.1[0m
+[0;32mI (213) heap_init: Initializing. RAM available for dynamic allocation:[0m
+[0;32mI (219) heap_init: At 408103E0 len 0006C230 (432 KiB): RAM[0m
+[0;32mI (225) heap_init: At 4087C610 len 00002F54 (11 KiB): RAM[0m
+[0;32mI (230) heap_init: At 50000000 len 00003FE8 (15 KiB): RTCRAM[0m
+[0;32mI (236) spi_flash: detected chip: generic[0m
+[0;32mI (239) spi_flash: flash io: dio[0m
+[0;33mW (242) spi_flash: Detected size(8192k) larger than the size in the binary image header(2048k). Using the size in the binary image header.[0m
+[0;32mI (254) sleep_gpio: Configure to isolate all GPIO pins in sleep state[0m
+[0;32mI (260) sleep_gpio: Enable automatic switching of GPIO sleep configuration[0m
+[0;32mI (267) main_task: Started on CPU0[0m
+[0;32mI (277) main_task: Calling app_main()[0m
+[0;32mI (277) gpio: GPIO[18]| InputEn: 0| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 [0m
+[0;32mI (277) gpio: GPIO[19]| InputEn: 0| OutputEn: 0| OpenDrain: 0| Pul\�I (297) gpio: GPIO[21]| InputEn: 0| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 [0m
+[0;32mI (297) gpio: GPIO[1]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 [0m
+[0;32mI (307) sdspi_transaction: cmd=52, R1 response: command not supported[0m
+[0;32mI (347) sdspi_transaction: cmd=5, R1 response: command not supported[0m
+[0;32mI (367) SD_TEST: Testing SD pin connections and pullup strength[0m
+[0;32mI (367) gpio: GPIO[5]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 [0m
+[0;32mI (367) gpio: GPIO[4]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 [0m
+[0;32mI (377) gpio: GPIO[6]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 [0m
+[0;32mI (377) gpio: GPIO[1]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 [0m
+
+**** PIN recovery time ****
+
+PIN  5 CLK   346 cycles
+PIN  4 MOSI  56 cycles
+PIN  6 MISO  10027 cycles
+PIN  1 CS    56 cycles
+
+**** PIN recovery time with weak pullup ****
+
+PIN  5 CLK   60 cycles
+PIN  4 MOSI  56 cycles
+PIN  6 MISO  112 cycles
+PIN  1 CS    56 cycles

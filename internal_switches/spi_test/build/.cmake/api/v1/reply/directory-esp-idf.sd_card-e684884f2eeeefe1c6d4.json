@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "esp-idf/sd_card",
+		"source" : "/root/esp/v5.4/esp-idf/examples/storage/sd_card/sdmmc/components/sd_card"
+	}
+}

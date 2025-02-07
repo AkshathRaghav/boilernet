@@ -1,0 +1,42 @@
+[1/11] Building C object esp-idf/main/CMakeFiles/__idf_main.dir/read_uart.c.obj
+In file included from /home/araviki/workbench/boilernet/internal_switches/spi_test/main/read_uart.c:1:
+/home/araviki/workbench/boilernet/internal_switches/spi_test/main/./read_uart.h:34:8: warning: extra tokens at end of #endif directive [-Wendif-labels]
+   34 | #endif READ_UART_H
+      |        ^~~~~~~~~~~
+[2/11] Linking C static library esp-idf/main/libmain.a
+[3/11] Performing configure step for 'bootloader'
+-- Building ESP-IDF components for target esp32c6
+-- Project sdkconfig file /home/araviki/workbench/boilernet/internal_switches/spi_test/sdkconfig
+-- Adding linker script /root/esp/v5.4/esp-idf/components/riscv/ld/rom.api.ld
+-- Adding linker script /root/esp/v5.4/esp-idf/components/soc/esp32c6/ld/esp32c6.peripherals.ld
+-- Bootloader project name: "bootloader" version: 1
+-- Adding linker script /root/esp/v5.4/esp-idf/components/esp_rom/esp32c6/ld/esp32c6.rom.ld
+-- Adding linker script /root/esp/v5.4/esp-idf/components/esp_rom/esp32c6/ld/esp32c6.rom.api.ld
+-- Adding linker script /root/esp/v5.4/esp-idf/components/esp_rom/esp32c6/ld/esp32c6.rom.rvfp.ld
+-- Adding linker script /root/esp/v5.4/esp-idf/components/esp_rom/esp32c6/ld/esp32c6.rom.wdt.ld
+-- Adding linker script /root/esp/v5.4/esp-idf/components/esp_rom/esp32c6/ld/esp32c6.rom.systimer.ld
+-- Adding linker script /root/esp/v5.4/esp-idf/components/esp_rom/esp32c6/ld/esp32c6.rom.version.ld
+-- Adding linker script /root/esp/v5.4/esp-idf/components/esp_rom/esp32c6/ld/esp32c6.rom.newlib.ld
+-- Adding linker script /root/esp/v5.4/esp-idf/components/bootloader/subproject/main/ld/esp32c6/bootloader.ld
+-- Adding linker script /root/esp/v5.4/esp-idf/components/bootloader/subproject/main/ld/esp32c6/bootloader.rom.ld
+-- Components: bootloader bootloader_support efuse esp_app_format esp_bootloader_format esp_common esp_hw_support esp_rom esp_security esp_system esptool_py freertos hal log main micro-ecc newlib partition_table riscv soc spi_flash
+-- Component paths: /root/esp/v5.4/esp-idf/components/bootloader /root/esp/v5.4/esp-idf/components/bootloader_support /root/esp/v5.4/esp-idf/components/efuse /root/esp/v5.4/esp-idf/components/esp_app_format /root/esp/v5.4/esp-idf/components/esp_bootloader_format /root/esp/v5.4/esp-idf/components/esp_common /root/esp/v5.4/esp-idf/components/esp_hw_support /root/esp/v5.4/esp-idf/components/esp_rom /root/esp/v5.4/esp-idf/components/esp_security /root/esp/v5.4/esp-idf/components/esp_system /root/esp/v5.4/esp-idf/components/esptool_py /root/esp/v5.4/esp-idf/components/freertos /root/esp/v5.4/esp-idf/components/hal /root/esp/v5.4/esp-idf/components/log /root/esp/v5.4/esp-idf/components/bootloader/subproject/main /root/esp/v5.4/esp-idf/components/bootloader/subproject/components/micro-ecc /root/esp/v5.4/esp-idf/components/newlib /root/esp/v5.4/esp-idf/components/partition_table /root/esp/v5.4/esp-idf/components/riscv /root/esp/v5.4/esp-idf/components/soc /root/esp/v5.4/esp-idf/components/spi_flash
+-- Configuring done (3.2s)
+-- Generating done (0.1s)
+-- Build files have been written to: /home/araviki/workbench/boilernet/internal_switches/spi_test/build/bootloader
+[4/11] Performing build step for 'bootloader'
+[1/1] cd /home/araviki/workbench/boilernet/internal_switches/spi_test/build/bootloader/esp-idf/esptool_py && /root/.espressif/python_env/idf5.4_py3.9_env/bin/python /root/esp/v5.4/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x0 /home/araviki/workbench/boilernet/internal_switches/spi_test/build/bootloader/bootloader.bin
+Bootloader binary size 0x58f0 bytes. 0x2710 bytes (31%) free.
+[5/11] No install step for 'bootloader'
+[6/11] Completed 'bootloader'
+[7/11] Generating ld/sections.ld
+[8/11] Building C object CMakeFiles/spi_test.elf.dir/project_elf_src_esp32c6.c.obj
+[9/11] Linking CXX executable spi_test.elf
+[10/11] Generating binary image from built executable
+esptool.py v4.8.1
+Creating esp32c6 image...
+Merged 1 ELF section
+Successfully created esp32c6 image.
+Generated /home/araviki/workbench/boilernet/internal_switches/spi_test/build/spi_test.bin
+[11/11] cd /home/araviki/workbench/boilernet/internal_switches/spi_test/build/esp-idf/esptool_py && /root/.espressif/python_env/idf5.4_py3.9_env/bin/python /root/esp/v5.4/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 partition --type app /home/araviki/workbench/boilernet/internal_switches/spi_test/build/partition_table/partition-table.bin /home/araviki/workbench/boilernet/internal_switches/spi_test/build/spi_test.bin
+spi_test.bin binary size 0x3f580 bytes. Smallest app partition is 0x100000 bytes. 0xc0a80 bytes (75%) free.

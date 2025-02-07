@@ -1,6 +1,5 @@
 #include "sd_card_main.h"
 
-
 static const char *TAG = "example";
 
 #define MOUNT_POINT "/sdcard"
@@ -158,9 +157,6 @@ void main(void)
     // Card has been initialized, print its properties
     sdmmc_card_print_info(stdout, card);
 
-    // Use POSIX and C standard library functions to work with files.
-
-    // First create a file.
     const char *file_hello = MOUNT_POINT"/hello.txt";
     char data[EXAMPLE_MAX_CHAR_SIZE];
     snprintf(data, EXAMPLE_MAX_CHAR_SIZE, "%s %s!\n", "Hello", card->cid.name);

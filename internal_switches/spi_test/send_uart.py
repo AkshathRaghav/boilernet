@@ -1,59 +1,118 @@
 import serial
 import time
+import os 
 
 # Open serial connection
 ser = serial.Serial('/dev/ttyUSB0', 115200, timeout=2)
 
-# Open the file to send
+
 file_path = "test.txt"
 file_path = "/home/araviki/workbench/boilernet/internal_switches/spi_test/README.md"
 file_path = "/home/araviki/workbench/boilernet/internal_switches/spi_test/QualificationsScreenshot.webp"
 chunk_size = 1024  # Must match ESP32 buffer size
 
-try:
-    print(file_path)
-    # Step 1: Send _START_ command
-    ser.write(b"_START_")
-    print("Sent: _START_")
 
-    # Wait for ACK from ESP32
-    ack = ser.read(3)
-    if ack.decode().strip() != "ACK":
-        print("Received: ", ack.decode().strip())
-        print("ESP32 did not acknowledge start. Exiting.")
-        exit()
+mode = 0
+chunk_size = 64
 
-    with open(file_path, "rb") as f:
-        while True:
-            # Read 1024 bytes from the file
-            data = f.read(chunk_size)
-            if not data:
-                break  # Exit when EOF is reached
+if mode: 
+    try:
+        print(file_path)
+        # Step 1: Send _START_ command
+        ser.write(b"_START_WRITE_")
+        print("Sent: _START_WRITE_")
 
-            # Send data in USB packet-sized chunks (64 bytes)
-            for i in range(0, len(data), 64):
-                ser.write(data[i:i+64])
-                time.sleep(0.01)  # Ensure buffer processing
+        # Wait for ACK from ESP32
+        ack = ser.read(3)
+        if ack.decode().strip() != "ACK":
+            print("Want: ACK -> Received: |", ack.decode().strip(), "|")
+            print("ESP32 did not acknowledge start. Exiting.")
+            exit()
 
-            # Wait for ACK after each chunk
-            ack = ser.read(3)
-            if ack.decode().strip() != "CCK":
-                print("Received: ", ack.decode().strip())
-                print("ESP32 did not acknowledge data. Exiting.")
-                exit()
+        with open(file_path, "rb") as f:
+            while True:
+                data = f.read(chunk_size)
+                if not data:
+                    break  
 
-    # Step 3: Send _END_ command
-    ser.write(b"_END_")
-    print("Sent: _END_")
+                for i in range(0, len(data), 64):
+                    ser.write(data[i:i+64])
+                    time.sleep(0.01)  
 
-    # Wait for final ACK
-    ack = ser.read(3)
-    if ack.decode().strip() == "ECK":
-        print("File transfer completed successfully!")
+                ack = ser.read(3)
+                if ack.decode().strip() != "CCK":
+                    print("Want: CCK -> Received: |", ack.decode().strip(), "|")
+                    print("ESP32 did not acknowledge data. Exiting.")
+                    exit()
 
-except Exception as e:
-    print(f"Error: {e}")
+        # Step 3: Send _END_ command
+        ser.write(b"_END_WRITE_")
+        print("Sent: _END_WRITE_")
 
-finally:
-    ser.close()
-    print("Serial connection closed.")
+        # Wait for final ACK
+        ack = ser.read(3)
+        if ack.decode().strip() == "ECK":
+            print("File transfer completed successfully!")
+        else: 
+            print("Want: ECK -> Received: |", ack.decode().strip(), "|")
+            print("ESP32 did not acknowledge. Exiting.")
+
+    except Exception as e:
+        print(f"Error: {e}")
+
+    finally:
+        ser.close()
+        print("Serial connection closed.")
+else: 
+    try:
+        ser.write(b"_START_GET_")
+        print("Sent: _START_GET_")
+
+        # Wait for ACK from ESP32
+        ack = ser.read(3)
+        if ack.decode().strip() != "ACK":
+            print(f"Want: ACK -> Received: |{ack.decode().strip()}|")
+            print("ESP32 did not acknowledge start. Exiting.")
+            exit()
+
+        total_received = 0
+
+        with open(file_path, "wb") as f:
+            while True:
+                data = ser.read(chunk_size)
+                if not data:
+                    break  
+
+                f.write(data)
+                f.flush()
+                total_received += len(data)
+
+
+                if b"_END_GET_" in data:
+                    print("ESP32 has completed file transfer.")
+                    break
+                else: 
+                    ser.write(b"CCK")
+
+                # else: 
+                    # print(data)
+
+        ser.write(b"_CONFIRM_")
+        esp32_response = ser.read(10)
+        esp32_response = esp32_response.decode().strip()
+        expected_size = int(esp32_response) if esp32_response.isdigit() else -1
+
+        # if total_received == expected_size:
+        #     print(f"File transfer completed successfully! Received {total_received} bytes.")
+        # else:
+        #     print(f"File corruption detected! Expected {expected_size}, received {total_received}. Deleting file.")
+        #     os.remove(file_path)
+
+    except Exception as e:
+        print(f"Error: {e}")
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+    finally:
+        ser.close()
+        print("Serial connection closed.")
