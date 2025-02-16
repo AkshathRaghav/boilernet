@@ -12,5 +12,5 @@ dependencies:
 direct_dependencies:
 - sd_card
 manifest_hash: cbc35bac0aa5e7ce2c40f064999c53af5b1c90545312a2af3d05fadc9d2754ca
-target: esp32c6
+target: esp32
 version: 2.0.0
