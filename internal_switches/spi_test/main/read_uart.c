@@ -11,7 +11,7 @@
 
 void led_init(int num) {
     gpio_reset_pin(num);
-    gpio_set_direction(num, GPIO_MODE_OUTPUT);
+    gpio_set_direction(num, GPIO_MODE_INPUT_OUTPUT);
 }
 
 

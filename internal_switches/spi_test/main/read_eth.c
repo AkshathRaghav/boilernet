@@ -30,11 +30,11 @@
 
 #define ETH_PHY_ADDR            -1 // does auto
 // #define ETH_PHY_ADDR            1 // should be hard-coded into the LAN
-#define ETH_PHY_RST_GPIO        16          // not connected
+#define ETH_PHY_RST_GPIO        -1          // not connected
 #define ETH_MDC_GPIO            23
 #define ETH_MDIO_GPIO           18
 #define ETH_GPIO0               0 
-
+#define ETH_GPIO2               2
 
 static EventGroupHandle_t s_eth_event_group;
 
@@ -100,13 +100,9 @@ static esp_eth_handle_t eth_init_internal(esp_eth_mac_t **mac_out, esp_eth_phy_t
 {
     esp_eth_handle_t ret = NULL;
 
-    vTaskDelay(pdMS_TO_TICKS(50)); 
-    gpio_set_direction(GPIO_NUM_17, GPIO_MODE_OUTPUT);
-    gpio_set_level(GPIO_NUM_17, 1);  // Force HIGH
-    vTaskDelay(pdMS_TO_TICKS(50)); 
-
     // Init common MAC and PHY configs to default
     eth_mac_config_t mac_config = ETH_MAC_DEFAULT_CONFIG();
+    mac_config.sw_reset_timeout_ms = 1000;
     eth_phy_config_t phy_config = ETH_PHY_DEFAULT_CONFIG();
 
     // Update PHY config based on board specific configuration
@@ -124,17 +120,21 @@ static esp_eth_handle_t eth_init_internal(esp_eth_mac_t **mac_out, esp_eth_phy_t
             .rmii =                                   
             {                                         
                 .clock_mode = EMAC_CLK_EXT_IN,   // Expect clock from external oscillator
-                .clock_gpio = ETH_GPIO0          // GPIO0 is the REFCLK input
+                .clock_gpio = GPIO_NUM_0          // GPIO0 is the REFCLK input
             }                                         
         },                                    
         .dma_burst_len = ETH_DMA_BURST_LEN_32 
     };
 
     // Create new ESP32 Ethernet MAC instance
+    ESP_LOGI(ETH_TAG, "Starting to create new MAC...");
     esp_eth_mac_t *mac = esp_eth_mac_new_esp32(&esp32_emac_config, &mac_config);
+    ESP_LOGI(ETH_TAG, "Finished MAC stuff...");
 
     // Create new PHY instance based on board configuration -> LAN8720
+    ESP_LOGI(ETH_TAG, "Starting to create new PHY stuff...");
     esp_eth_phy_t *phy = esp_eth_phy_new_lan87xx(&phy_config);
+    ESP_LOGI(ETH_TAG, "Finished PHY stuff...");
 
     // Init Ethernet driver to default and install it
     esp_eth_handle_t eth_handle = NULL;
@@ -162,9 +162,38 @@ err:
     return ret;
 }
 
+// void lan8720_power_cycle(void)
+// {
+//     gpio_set_direction(GPIO_NUM_5, GPIO_MODE_INPUT_OUTPUT);
+
+//     // ESP_LOGI(ETH_TAG, "Setting GPIO5 LOW...");
+//     // gpio_set_level(GPIO_NUM_5, 0);
+//     // vTaskDelay(pdMS_TO_TICKS(500));
+//     // ESP_LOGI(ETH_TAG, "GPIO5 state after LOW: %d", gpio_get_level(GPIO_NUM_5));
+
+//     ESP_LOGI(ETH_TAG, "Setting GPIO5 HIGH...");
+//     gpio_set_level(GPIO_NUM_5, 1);
+//     vTaskDelay(pdMS_TO_TICKS(500));
+//     ESP_LOGI(ETH_TAG, "GPIO5 state after HIGH: %d", gpio_get_level(GPIO_NUM_5));
+
+// }
+
+
 void ethernet_setup(void)
 {
     s_eth_event_group = xEventGroupCreate();
+
+    // lan8720_power_cycle();
+
+    // ESP_LOGI(ETH_TAG, "Setting GPIO16 LOW...");
+    // gpio_set_level(GPIO_NUM_16, 0);
+    // vTaskDelay(pdMS_TO_TICKS(200));
+    // ESP_LOGI(ETH_TAG, "GPIO16 state after LOW: %d", gpio_get_level(GPIO_NUM_16));
+
+    // ESP_LOGI(ETH_TAG, "Setting GPIO16 HIGH...");
+    // gpio_set_level(GPIO_NUM_16, 1);
+    // vTaskDelay(pdMS_TO_TICKS(200));
+    // ESP_LOGI(ETH_TAG, "GPIO16 state after HIGH: %d", gpio_get_level(GPIO_NUM_16));
 
     // Initialize Ethernet driver
     esp_eth_handle_t eth_handle;
