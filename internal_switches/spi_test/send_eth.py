@@ -1,21 +1,21 @@
 import socket
 
-def send_packet(dest_ip, port, message):
-    """Send a UDP packet over Ethernet."""
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Create UDP socket
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+TCP_IP = "192.168.0.50"  # ESP32 static IP
+TCP_PORT = 8080
+MESSAGE = b"Hello Gautam, Gokul and Aneesh"
 
-    try:
-        sock.sendto(message.encode(), (dest_ip, port))
-        print(f"Sent packet to {dest_ip}:{port}")
-    except Exception as e:
-        print(f"Error sending packet: {e}")
-    finally:
-        sock.close()
+# Create a TCP/IP socket
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-if __name__ == "__main__":
-    DEST_IP = "192.168.1.5"
-    PORT = 5005  
-    MESSAGE = "Hello from Python!"
+# Connect to the ESP32 TCP server
+sock.connect((TCP_IP, TCP_PORT))
 
-    send_packet(DEST_IP, PORT, MESSAGE)
+# Send the message
+sock.sendall(MESSAGE)
+
+# Wait for the response (adjust buffer size if needed)
+response = sock.recv(1024)
+print("Received from ESP32:", response.decode())
+
+# Close the connection
+sock.close()

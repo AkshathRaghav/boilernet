@@ -6,5 +6,11 @@
     ],
     "idf.port": "/dev/ttyUSB0",
     "idf.toolsPath": "/root/.espressif",
-    "idf.flashType": "UART"
+    "idf.flashType": "UART",
+    "idf.customExtraVars": {
+        "IDF_TARGET": "esp32"
+    },
+    "files.associations": {
+        "string.h": "c"
+    }
 }

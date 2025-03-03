@@ -1,0 +1,170 @@
+[0;33m--- esp-idf-monitor 1.5.0 on /dev/ttyUSB1 115200[0m
+[0;33m--- Quit: Ctrl+] | Menu: Ctrl+T | Help: Ctrl+T followed by Ctrl+H[0m
+[0;33m--- 0x40080400: _init at ??:?
+[0m
+[0;33m--- 0x40081488: call_start_cpu1 at /root/esp/v5.4/esp-idf/components/esp_system/port/cpu_start.c:196
+[0m
+[0;33m--- 0x400d2af8: __esp_system_init_fn_init_efuse_check at /root/esp/v5.4/esp-idf/components/efuse/src/esp_efuse_startup.c:36
+[0m
+[0;33m--- 0x400d3120: __esp_system_init_fn_init_show_cpu_freq at /root/esp/v5.4/esp-idf/components/esp_system/startup_funcs.c:58
+[0m
+[0;33m--- 0x400d48a8: __esp_system_init_fn_init_heap at /root/esp/v5.4/esp-idf/components/heap/heap_caps_init.c:25
+[0m
+[0;33m--- 0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+[0m
+[0;33m--- 0x40000000: _WindowOverflow4 in ROM
+[0m
+[0;33m--- 0x40000000: _WindowOverflow4 in ROM
+[0m
+[0;33m--- 0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+[0m
+[0;33m--- 0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+[0m
+[0;33m--- 0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+0x40082000: esp_backtrace_print_from_frame at /root/esp/v5.4/esp-idf/components/esp_system/port/arch/xtensa/debug_helpers.c:75 (discriminator 3)
+[0m
+[0;33m--- 0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+0x40082000: esp_backtrace_print_from_frame at /root/esp/v5.4/esp-idf/components/esp_system/port/arch/xtensa/debug_helpers.c:75 (discriminator 3)
+0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+[0m
+[0;33m--- 0x40082000: esp_backtrace_print_from_frame at /root/esp/v5.4/esp-idf/components/esp_system/port/arch/xtensa/debug_helpers.c:75 (discriminator 3)
+0x40084000: cache_ll_l1_get_bus at /root/esp/v5.4/esp-idf/components/hal/esp32/include/hal/cache_ll.h:122
+ (inlined by) s_do_mapping at /root/esp/v5.4/esp-idf/components/esp_mm/esp_mmu_map.c:431
+[0m
+[0;33m--- 0x40082000: esp_backtrace_print_from_frame at /root/esp/v5.4/esp-idf/components/esp_system/port/arch/xtensa/debug_helpers.c:75 (discriminator 3)
+0x40084000: cache_ll_l1_get_bus at /root/esp/v5.4/esp-idf/components/hal/esp32/include/hal/cache_ll.h:122
+ (inlined by) s_do_mapping at /root/esp/v5.4/esp-idf/components/esp_mm/esp_mmu_map.c:431
+0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+[0m
+[0;33m--- 0x40084000: cache_ll_l1_get_bus at /root/esp/v5.4/esp-idf/components/hal/esp32/include/hal/cache_ll.h:122
+ (inlined by) s_do_mapping at /root/esp/v5.4/esp-idf/components/esp_mm/esp_mmu_map.c:431
+0x40086000: prvSendAcquireGeneric at /root/esp/v5.4/esp-idf/components/esp_ringbuf/ringbuf.c:797
+[0m
+[0;33m--- 0x40084000: cache_ll_l1_get_bus at /root/esp/v5.4/esp-idf/components/hal/esp32/include/hal/cache_ll.h:122
+ (inlined by) s_do_mapping at /root/esp/v5.4/esp-idf/components/esp_mm/esp_mmu_map.c:431
+0x40086000: prvSendAcquireGeneric at /root/esp/v5.4/esp-idf/components/esp_ringbuf/ringbuf.c:797
+0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+[0m
+[0;33m--- 0x40086000: prvSendAcquireGeneric at /root/esp/v5.4/esp-idf/components/esp_ringbuf/ringbuf.c:797
+0x40088000: xTaskIncrementTick at /root/esp/v5.4/esp-idf/components/freertos/FreeRTOS-Kernel/tasks.c:3257
+[0m
+[0;33m--- 0x40086000: prvSendAcquireGeneric at /root/esp/v5.4/esp-idf/components/esp_ringbuf/ringbuf.c:797
+0x40088000: xTaskIncrementTick at /root/esp/v5.4/esp-idf/components/freertos/FreeRTOS-Kernel/tasks.c:3257
+0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+[0m
+[0;33m--- 0x40088000: xTaskIncrementTick at /root/esp/v5.4/esp-idf/components/freertos/FreeRTOS-Kernel/tasks.c:3257
+0x4008a000: mmu_ll_set_entry_invalid at /root/esp/v5.4/esp-idf/components/hal/esp32/include/hal/mmu_ll.h:281
+ (inlined by) mmu_hal_unmap_region at /root/esp/v5.4/esp-idf/components/hal/mmu_hal.c:115
+[0m
+[0;33m--- 0x40088000: xTaskIncrementTick at /root/esp/v5.4/esp-idf/components/freertos/FreeRTOS-Kernel/tasks.c:3257
+0x4008a000: mmu_ll_set_entry_invalid at /root/esp/v5.4/esp-idf/components/hal/esp32/include/hal/mmu_ll.h:281
+ (inlined by) mmu_hal_unmap_region at /root/esp/v5.4/esp-idf/components/hal/mmu_hal.c:115
+0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+[0m
+[0;33m--- 0x4008a000: mmu_ll_set_entry_invalid at /root/esp/v5.4/esp-idf/components/hal/esp32/include/hal/mmu_ll.h:281
+ (inlined by) mmu_hal_unmap_region at /root/esp/v5.4/esp-idf/components/hal/mmu_hal.c:115
+0x4008c000: insert_free_block at /root/esp/v5.4/esp-idf/components/heap/tlsf/tlsf_control_functions.h:399
+ (inlined by) block_insert at /root/esp/v5.4/esp-idf/components/heap/tlsf/tlsf_control_functions.h:430
+ (inlined by) block_trim_free at /root/esp/v5.4/esp-idf/components/heap/tlsf/tlsf_control_functions.h:554
+ (inlined by) block_prepare_used at /root/esp/v5.4/esp-idf/components/heap/tlsf/tlsf_control_functions.h:631
+ (inlined by) tlsf_memalign_offs at /root/esp/v5.4/esp-idf/components/heap/tlsf/tlsf.c:609
+[0m
+[0;33m--- 0x4008a000: mmu_ll_set_entry_invalid at /root/esp/v5.4/esp-idf/components/hal/esp32/include/hal/mmu_ll.h:281
+ (inlined by) mmu_hal_unmap_region at /root/esp/v5.4/esp-idf/components/hal/mmu_hal.c:115
+0x4008c000: insert_free_block at /root/esp/v5.4/esp-idf/components/heap/tlsf/tlsf_control_functions.h:399
+ (inlined by) block_insert at /root/esp/v5.4/esp-idf/components/heap/tlsf/tlsf_control_functions.h:430
+ (inlined by) block_trim_free at /root/esp/v5.4/esp-idf/components/heap/tlsf/tlsf_control_functions.h:554
+ (inlined by) block_prepare_used at /root/esp/v5.4/esp-idf/components/heap/tlsf/tlsf_control_functions.h:631
+ (inlined by) tlsf_memalign_offs at /root/esp/v5.4/esp-idf/components/heap/tlsf/tlsf.c:609
+0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+[0m
+[0;33m--- 0x4008c000: insert_free_block at /root/esp/v5.4/esp-idf/components/heap/tlsf/tlsf_control_functions.h:399
+ (inlined by) block_insert at /root/esp/v5.4/esp-idf/components/heap/tlsf/tlsf_control_functions.h:430
+ (inlined by) block_trim_free at /root/esp/v5.4/esp-idf/components/heap/tlsf/tlsf_control_functions.h:554
+ (inlined by) block_prepare_used at /root/esp/v5.4/esp-idf/components/heap/tlsf/tlsf_control_functions.h:631
+ (inlined by) tlsf_memalign_offs at /root/esp/v5.4/esp-idf/components/heap/tlsf/tlsf.c:609
+0x4008e000: _xt_coproc_restorecs at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_context.S:607
+[0m
+[0;33m--- 0x4008c000: insert_free_block at /root/esp/v5.4/esp-idf/components/heap/tlsf/tlsf_control_functions.h:399
+ (inlined by) block_insert at /root/esp/v5.4/esp-idf/components/heap/tlsf/tlsf_control_functions.h:430
+ (inlined by) block_trim_free at /root/esp/v5.4/esp-idf/components/heap/tlsf/tlsf_control_functions.h:554
+ (inlined by) block_prepare_used at /root/esp/v5.4/esp-idf/components/heap/tlsf/tlsf_control_functions.h:631
+ (inlined by) tlsf_memalign_offs at /root/esp/v5.4/esp-idf/components/heap/tlsf/tlsf.c:609
+0x4008e000: _xt_coproc_restorecs at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_context.S:607
+0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+[0m
+[0;33m--- 0x4008e000: _xt_coproc_restorecs at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_context.S:607
+[0m
+[0;33m--- 0x4008e000: _xt_coproc_restorecs at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_context.S:607
+0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+[0m
+[0;33m--- 0x400d2788: __esp_system_init_fn_esp_timer_init_nonos at /root/esp/v5.4/esp-idf/components/esp_timer/src/esp_timer_init.c:28
+[0m
+[0;33m--- 0x400d59ec: __esp_system_init_fn_init_newlib at /root/esp/v5.4/esp-idf/components/newlib/newlib_init.c:157
+[0m
+[0;33m--- 0x400d3164: __esp_system_init_fn_init_brownout at /root/esp/v5.4/esp-idf/components/esp_system/startup_funcs.c:67
+[0m
+[0;33m--- 0x400d3170: __esp_system_init_fn_init_newlib_time at /root/esp/v5.4/esp-idf/components/esp_system/startup_funcs.c:81
+[0m
+[0;33m--- 0x400d70f4: __esp_system_init_fn_init_vfs_uart at /root/esp/v5.4/esp-idf/components/esp_driver_uart/src/uart_vfs.c:1097
+[0m
+[0;33m--- 0x400d8d3c: __esp_system_init_fn_init_vfs_nullfs at /root/esp/v5.4/esp-idf/components/vfs/nullfs.c:322
+[0m
+[0;33m--- 0x400d7a90: __esp_system_init_fn_init_vfs_console at /root/esp/v5.4/esp-idf/components/esp_vfs_console/vfs_console.c:247
+[0m
+[0;33m--- 0x400d5a58: __esp_system_init_fn_init_newlib_stdio at /root/esp/v5.4/esp-idf/components/newlib/newlib_init.c:202
+[0m
+[0;33m--- 0x400d317c: __esp_system_init_fn_init_flash at /root/esp/v5.4/esp-idf/components/esp_system/startup_funcs.c:88
+[0m
+[0;33m--- 0x400d2b98: __esp_system_init_fn_init_efuse at /root/esp/v5.4/esp-idf/components/efuse/src/esp_efuse_startup.c:142
+[0m
+[0;33m--- 0x400e1d2c: esp_clock_output_pin_ctrl_init at /root/esp/v5.4/esp-idf/components/esp_hw_support/esp_clock_output.c:246
+[0m
+[0;33m--- 0x40085df4: enable_timer_group0_for_calibration at /root/esp/v5.4/esp-idf/components/esp_hw_support/port/esp32/rtc_time.c:197
+[0m
+[0;33m--- 0x400d40a4: esp_ipc_init at /root/esp/v5.4/esp-idf/components/esp_system/esp_ipc.c:113
+[0m
+[0;33m--- 0x400d3744: esp_reset_reason_init at /root/esp/v5.4/esp-idf/components/esp_system/port/soc/esp32/reset_reason.c:60
+[0m
+[0;33m--- 0x400df290: __esp_system_init_fn_esp_timer_init_os at /root/esp/v5.4/esp-idf/components/esp_timer/src/esp_timer.c:566
+[0m
+[0;33m--- 0x400d31a0: __esp_system_init_fn_init_disable_rtc_wdt at /root/esp/v5.4/esp-idf/components/esp_system/startup_funcs.c:143
+[0m
+[0;33m--- 0x400f5a90: esp_netif_new_api at /root/esp/v5.4/esp-idf/components/esp_netif/lwip/esp_netif_lwip.c:712
+[0m
+[0;33m--- 0x400f5688: esp_netif_dhcpc_stop_api at /root/esp/v5.4/esp-idf/components/esp_netif/lwip/esp_netif_lwip.c:1463
+[0m
+[0;33m--- 0x400f5f80: esp_netif_set_ip_info_api at /root/esp/v5.4/esp-idf/components/esp_netif/lwip/esp_netif_lwip.c:1883
+[0m
+[0;33m--- 0x400f5260: esp_netif_set_mac_api at /root/esp/v5.4/esp-idf/components/esp_netif/lwip/esp_netif_lwip.c:1018
+[0m
+[0;33m--- 0x400da6b4: eth_action_start at /root/esp/v5.4/esp-idf/components/esp_eth/src/esp_eth_netif_glue.c:76
+[0m
+[0;33m--- 0x400f5c64: esp_netif_start_api at /root/esp/v5.4/esp-idf/components/esp_netif/lwip/esp_netif_lwip.c:1093
+[0m
+[0;33m--- 0x400f63ac: esp_netif_update_default_netif_lwip at /root/esp/v5.4/esp-idf/components/esp_netif/lwip/esp_netif_lwip.c:313
+[0m
+[0;33m--- 0x400d8fe8: eth_event_handler at /home/araviki/workbench/boilernet/internal_switches/spi_test/main/read_eth.c:180
+[0m
+[0;33m--- 0x400da624: eth_action_connected at /root/esp/v5.4/esp-idf/components/esp_eth/src/esp_eth_netif_glue.c:96
+[0m
+[0;33m--- 0x400f5e60: esp_netif_up_api at /root/esp/v5.4/esp-idf/components/esp_netif/lwip/esp_netif_lwip.c:1723
+[0m
+[0;33m--- 0x400f63ac: esp_netif_update_default_netif_lwip at /root/esp/v5.4/esp-idf/components/esp_netif/lwip/esp_netif_lwip.c:313
+[0m
+[0;33m--- 0x400f528c: esp_netif_set_ip_old_info_api at /root/esp/v5.4/esp-idf/components/esp_netif/lwip/esp_netif_lwip.c:1866
+[0m
+[0;33m--- 0x400d8fe8: eth_event_handler at /home/araviki/workbench/boilernet/internal_switches/spi_test/main/read_eth.c:180
+[0m
+[0;33m--- 0x400f524c: get_handle_from_ifkey_api at /root/esp/v5.4/esp-idf/components/esp_netif/lwip/esp_netif_lwip.c:816
+[0m
+[0;33m--- 0x400f5758: esp_netif_dhcpc_start_api at /root/esp/v5.4/esp-idf/components/esp_netif/lwip/esp_netif_lwip.c:1515
+[0m
+[0;33m--- 0x400da5b4: eth_action_got_ip at /root/esp/v5.4/esp-idf/components/esp_eth/src/esp_eth_netif_glue.c:119
+[0m
+[0;33m--- 0x400d8f38: got_ip_event_handler at /home/araviki/workbench/boilernet/internal_switches/spi_test/main/read_eth.c:216
+[0m
+[0;33m--- 0x400f63ac: esp_netif_update_default_netif_lwip at /root/esp/v5.4/esp-idf/components/esp_netif/lwip/esp_netif_lwip.c:313
+[0m
+[0m

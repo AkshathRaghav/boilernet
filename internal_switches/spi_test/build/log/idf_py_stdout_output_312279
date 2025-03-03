@@ -1,0 +1,1840 @@
+ets Jul 29 2019 12:21:46
+
+rst:0x1 (POWERON_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:6276
+load:0x40078000,len:15716
+load:0x40080400,len:4
+ho 8 tail 4 room 4
+load:0x40080404,len:3860
+entry 0x4008063c
+[0;32mI (31) boot: ESP-IDF v5.4-dirty 2nd stage bootloader[0m
+[0;32mI (31) boot: compile time Feb 28 2025 12:23:00[0m
+[0;32mI (31) boot: Multicore bootloader[0m
+[0;32mI (33) boot: chip revision: v3.1[0m
+[0;32mI (36) boot.esp32: SPI Speed      : 40MHz[0m
+[0;32mI (39) boot.esp32: SPI Mode       : DIO[0m
+[0;32mI (43) boot.esp32: SPI Flash Size : 2MB[0m
+[0;32mI (47) boot: Enabling RNG early entropy source...[0m
+[0;32mI (51) boot: Partition Table:[0m
+[0;32mI (54) boot: ## Label            Usage          Type ST Offset   Length[0m
+[0;32mI (60) boot:  0 nvs              WiFi data        01 02 00009000 00006000[0m
+[0;32mI (66) boot:  1 phy_init         RF data          01 01 0000f000 00001000[0m
+[0;32mI (73) boot:  2 factory          factory app      00 00 00010000 00100000[0m
+[0;32mI (80) boot: End of partition table[0m
+[0;32mI (83) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=14dd0h ( 85456) map[0m
+[0;32mI (119) esp_image: segment 1: paddr=00024df8 vaddr=3ff80000 size=0001ch (    28) load[0m
+[0;32mI (120) esp_image: segment 2: paddr=00024e1c vaddr=3ffb0000 size=02564h (  9572) load[0m
+[0;32mI (127) esp_image: segment 3: paddr=00027388 vaddr=40080000 size=08c90h ( 35984) load[0m
+[0;32mI (145) esp_image: segment 4: paddr=00030020 vaddr=400d0020 size=36bb0h (224176) map[0m
+[0;32mI (222) esp_image: segment 5: paddr=00066bd8 vaddr=40088c90 size=053ach ( 21420) load[0m
+[0;32mI (237) boot: Loaded app from partition at offset 0x10000[0m
+[0;32mI (237) boot: Disabling RNG early entropy source...[0m
+V (247) mmap: after coalescing, 3 regions are left
+[0;32mI (248) cpu_start: Multicore app[0m
+D (248) cpu_start: Pro cpu up
+D (248) cpu_start: Starting app cpu, entry point is 0x40081488
+D (0) cpu_start: App cpu up
+D (261) clk: RTC_SLOW_CLK calibration value: 3075904
+D (272) cpu_start: calling init function: 0x400d2c70 on core: 0
+D (272) cpu_start: calling init function: 0x400d3298 on core: 0
+[0;32mI (274) cpu_start: Pro cpu start user code[0m
+[0;32mI (278) cpu_start: cpu freq: 160000000 Hz[0m
+D (282) cpu_start: calling init function: 0x400d2bb0 on core: 0
+[0;32mI (287) app_init: Application information:[0m
+[0;32mI (291) app_init: Project name:     spi_test[0m
+[0;32mI (295) app_init: App version:      3ac2428-dirty[0m
+[0;32mI (300) app_init: Compile time:     Mar  3 2025 03:34:14[0m
+[0;32mI (305) app_init: ELF file SHA256:  5e94025b3...[0m
+[0;32mI (309) app_init: ESP-IDF:          v5.4-dirty[0m
+D (313) cpu_start: calling init function: 0x400d2c84 on core: 0
+[0;32mI (319) efuse_init: Min chip rev:     v0.0[0m
+[0;32mI (323) efuse_init: Max chip rev:     v3.99 [0m
+[0;32mI (327) efuse_init: Chip rev:         v3.1[0m
+D (330) cpu_start: calling init function: 0x400d4a20 on core: 0
+V (336) memory_layout: reserved range is 0x3f414d18 - 0x3f414d60
+D (342) memory_layout: Checking 9 reserved memory ranges:
+D (347) memory_layout: Reserved memory range 0x3ff82000 - 0x3ff82000
+D (353) memory_layout: Reserved memory range 0x3ffae000 - 0x3ffae6e0
+D (359) memory_layout: Reserved memory range 0x3ffb0000 - 0x3ffb3858
+D (365) memory_layout: Reserved memory range 0x3ffe0000 - 0x3ffe0440
+D (371) memory_layout: Reserved memory range 0x3ffe3f20 - 0x3ffe4350
+D (377) memory_layout: Reserved memory range 0x40070000 - 0x40078000
+D (383) memory_layout: Reserved memory range 0x40078000 - 0x40080000
+D (389) memory_layout: Reserved memory range 0x40080000 - 0x4008e03c
+D (396) memory_layout: Reserved memory range 0x50001fe8 - 0x50002000
+D (402) memory_layout: Building list of available memory regions:
+V (407) memory_layout: Examining memory region 0x3ffae000 - 0x3ffb0000
+V (414) memory_layout: Start of region 0x3ffae000 - 0x3ffb0000 overlaps reserved 0x3ffae000 - 0x3ffae6e0
+D (423) memory_layout: Available memory region 0x3ffae6e0 - 0x3ffb0000
+V (429) memory_layout: Examining memory region 0x3ffb0000 - 0x3ffb8000
+V (435) memory_layout: Start of region 0x3ffb0000 - 0x3ffb8000 overlaps reserved 0x3ffb0000 - 0x3ffb3858
+D (445) memory_layout: Available memory region 0x3ffb3858 - 0x3ffb8000
+V (451) memory_layout: Examining memory region 0x3ffb8000 - 0x3ffc0000
+D (457) memory_layout: Available memory region 0x3ffb8000 - 0x3ffc0000
+V (463) memory_layout: Examining memory region 0x3ffc0000 - 0x3ffc2000
+D (470) memory_layout: Available memory region 0x3ffc0000 - 0x3ffc2000
+V (476) memory_layout: Examining memory region 0x3ffc2000 - 0x3ffc4000
+D (482) memory_layout: Available memory region 0x3ffc2000 - 0x3ffc4000
+V (488) memory_layout: Examining memory region 0x3ffc4000 - 0x3ffc6000
+D (495) memory_layout: Available memory region 0x3ffc4000 - 0x3ffc6000
+V (501) memory_layout: Examining memory region 0x3ffc6000 - 0x3ffc8000
+D (507) memory_layout: Available memory region 0x3ffc6000 - 0x3ffc8000
+V (513) memory_layout: Examining memory region 0x3ffc8000 - 0x3ffca000
+D (520) memory_layout: Available memory region 0x3ffc8000 - 0x3ffca000
+V (526) memory_layout: Examining memory region 0x3ffca000 - 0x3ffcc000
+D (532) memory_layout: Available memory region 0x3ffca000 - 0x3ffcc000
+V (538) memory_layout: Examining memory region 0x3ffcc000 - 0x3ffce000
+D (545) memory_layout: Available memory region 0x3ffcc000 - 0x3ffce000
+V (551) memory_layout: Examining memory region 0x3ffce000 - 0x3ffd0000
+D (557) memory_layout: Available memory region 0x3ffce000 - 0x3ffd0000
+V (563) memory_layout: Examining memory region 0x3ffd0000 - 0x3ffd2000
+D (570) memory_layout: Available memory region 0x3ffd0000 - 0x3ffd2000
+V (576) memory_layout: Examining memory region 0x3ffd2000 - 0x3ffd4000
+D (582) memory_layout: Available memory region 0x3ffd2000 - 0x3ffd4000
+V (588) memory_layout: Examining memory region 0x3ffd4000 - 0x3ffd6000
+D (595) memory_layout: Available memory region 0x3ffd4000 - 0x3ffd6000
+V (601) memory_layout: Examining memory region 0x3ffd6000 - 0x3ffd8000
+D (607) memory_layout: Available memory region 0x3ffd6000 - 0x3ffd8000
+V (613) memory_layout: Examining memory region 0x3ffd8000 - 0x3ffda000
+D (620) memory_layout: Available memory region 0x3ffd8000 - 0x3ffda000
+V (626) memory_layout: Examining memory region 0x3ffda000 - 0x3ffdc000
+D (632) memory_layout: Available memory region 0x3ffda000 - 0x3ffdc000
+V (638) memory_layout: Examining memory region 0x3ffdc000 - 0x3ffde000
+D (645) memory_layout: Available memory region 0x3ffdc000 - 0x3ffde000
+V (651) memory_layout: Examining memory region 0x3ffde000 - 0x3ffe0000
+D (657) memory_layout: Available memory region 0x3ffde000 - 0x3ffe0000
+V (663) memory_layout: Examining memory region 0x3ffe0000 - 0x3ffe4000
+V (670) memory_layout: Start of region 0x3ffe0000 - 0x3ffe4000 overlaps reserved 0x3ffe0000 - 0x3ffe0440
+V (679) memory_layout: End of region 0x3ffe0440 - 0x3ffe4000 overlaps reserved 0x3ffe3f20 - 0x3ffe4350
+D (688) memory_layout: Available memory region 0x3ffe0440 - 0x3ffe3f20
+V (694) memory_layout: Examining memory region 0x3ffe4000 - 0x3ffe8000
+V (700) memory_layout: Start of region 0x3ffe4000 - 0x3ffe8000 overlaps reserved 0x3ffe3f20 - 0x3ffe4350
+D (709) memory_layout: Available memory region 0x3ffe4350 - 0x3ffe8000
+V (716) memory_layout: Examining memory region 0x3ffe8000 - 0x3fff0000
+D (722) memory_layout: Available memory region 0x3ffe8000 - 0x3fff0000
+V (728) memory_layout: Examining memory region 0x3fff0000 - 0x3fff8000
+D (734) memory_layout: Available memory region 0x3fff0000 - 0x3fff8000
+V (741) memory_layout: Examining memory region 0x3fff8000 - 0x3fffc000
+D (747) memory_layout: Available memory region 0x3fff8000 - 0x3fffc000
+V (753) memory_layout: Examining memory region 0x3fffc000 - 0x40000000
+D (759) memory_layout: Available memory region 0x3fffc000 - 0x40000000
+V (766) memory_layout: Examining memory region 0x40070000 - 0x40078000
+V (772) memory_layout: Region 0x40070000 - 0x40078000 inside of reserved 0x40070000 - 0x40078000
+V (781) memory_layout: Examining memory region 0x40078000 - 0x40080000
+V (787) memory_layout: Region 0x40078000 - 0x40080000 inside of reserved 0x40078000 - 0x40080000
+V (795) memory_layout: Examining memory region 0x40080000 - 0x40082000
+V (802) memory_layout: Region 0x40080000 - 0x40082000 inside of reserved 0x40080000 - 0x4008e03c
+V (810) memory_layout: Examining memory region 0x40082000 - 0x40084000
+V (816) memory_layout: Region 0x40082000 - 0x40084000 inside of reserved 0x40080000 - 0x4008e03c
+V (825) memory_layout: Examining memory region 0x40084000 - 0x40086000
+V (831) memory_layout: Region 0x40084000 - 0x40086000 inside of reserved 0x40080000 - 0x4008e03c
+V (840) memory_layout: Examining memory region 0x40086000 - 0x40088000
+V (846) memory_layout: Region 0x40086000 - 0x40088000 inside of reserved 0x40080000 - 0x4008e03c
+V (854) memory_layout: Examining memory region 0x40088000 - 0x4008a000
+V (861) memory_layout: Region 0x40088000 - 0x4008a000 inside of reserved 0x40080000 - 0x4008e03c
+V (869) memory_layout: Examining memory region 0x4008a000 - 0x4008c000
+V (875) memory_layout: Region 0x4008a000 - 0x4008c000 inside of reserved 0x40080000 - 0x4008e03c
+V (884) memory_layout: Examining memory region 0x4008c000 - 0x4008e000
+V (890) memory_layout: Region 0x4008c000 - 0x4008e000 inside of reserved 0x40080000 - 0x4008e03c
+V (899) memory_layout: Examining memory region 0x4008e000 - 0x40090000
+V (905) memory_layout: Start of region 0x4008e000 - 0x40090000 overlaps reserved 0x40080000 - 0x4008e03c
+D (914) memory_layout: Available memory region 0x4008e03c - 0x40090000
+V (920) memory_layout: Examining memory region 0x40090000 - 0x40092000
+D (927) memory_layout: Available memory region 0x40090000 - 0x40092000
+V (933) memory_layout: Examining memory region 0x40092000 - 0x40094000
+D (939) memory_layout: Available memory region 0x40092000 - 0x40094000
+V (945) memory_layout: Examining memory region 0x40094000 - 0x40096000
+D (952) memory_layout: Available memory region 0x40094000 - 0x40096000
+V (958) memory_layout: Examining memory region 0x40096000 - 0x40098000
+D (964) memory_layout: Available memory region 0x40096000 - 0x40098000
+V (970) memory_layout: Examining memory region 0x40098000 - 0x4009a000
+D (977) memory_layout: Available memory region 0x40098000 - 0x4009a000
+V (983) memory_layout: Examining memory region 0x4009a000 - 0x4009c000
+D (989) memory_layout: Available memory region 0x4009a000 - 0x4009c000
+V (995) memory_layout: Examining memory region 0x4009c000 - 0x4009e000
+D (1002) memory_layout: Available memory region 0x4009c000 - 0x4009e000
+V (1008) memory_layout: Examining memory region 0x4009e000 - 0x400a0000
+D (1014) memory_layout: Available memory region 0x4009e000 - 0x400a0000
+[0;32mI (1021) heap_init: Initializing. RAM available for dynamic allocation:[0m
+D (1027) heap_init: New heap initialised at 0x3ffae6e0
+[0;32mI (1032) heap_init: At 3FFAE6E0 len 00001920 (6 KiB): DRAM[0m
+D (1037) heap_init: New heap initialised at 0x3ffb3858
+[0;32mI (1042) heap_init: At 3FFB3858 len 0002C7A8 (177 KiB): DRAM[0m
+[0;32mI (1047) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM[0m
+[0;32mI (1053) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM[0m
+D (1058) heap_init: New heap initialised at 0x4008e03c
+[0;32mI (1063) heap_init: At 4008E03C len 00011FC4 (71 KiB): IRAM[0m
+D (1068) cpu_start: calling init function: 0x400d2900 on core: 0
+D (1074) cpu_start: calling init function: 0x400d5b64 on core: 0
+D (1080) cpu_start: calling init function: 0x400d32dc on core: 0
+V (1086) intr_alloc: esp_intr_alloc_intrstatus (cpu 0): checking args
+V (1092) intr_alloc: esp_intr_alloc_intrstatus (cpu 0): Args okay. Resulting flags 0x40E
+D (1100) intr_alloc: Connected src 46 to int 1 (cpu 0)
+D (1104) cpu_start: calling init function: 0x400d32e8 on core: 0
+D (1110) cpu_start: calling init function: 0x400d726c on core: 0
+D (1116) cpu_start: calling init function: 0x400d8eb4 on core: 0
+D (1122) cpu_start: calling init function: 0x400d7c08 on core: 0
+D (1127) cpu_start: calling init function: 0x400d5bd0 on core: 0
+D (1133) cpu_start: calling init function: 0x400d32f4 on core: 0
+V (1139) memspi: raw_chip_id: 164068
+
+V (1142) memspi: chip_id: 684016
+
+V (1145) memspi: raw_chip_id: 164068
+
+V (1149) memspi: chip_id: 684016
+
+D (1152) spi_flash: trying chip: issi
+D (1155) spi_flash: trying chip: gd
+D (1159) spi_flash: trying chip: mxic
+D (1162) spi_flash: trying chip: winbond
+D (1166) spi_flash: trying chip: generic
+[0;32mI (1169) spi_flash: detected chip: generic[0m
+[0;32mI (1173) spi_flash: flash io: dio[0m
+[0;33mW (1176) spi_flash: Detected size(4096k) larger than the size in the binary image header(2048k). Using the size in the binary image header.[0m
+D (1188) cpu_start: calling init function: 0x400d2d10 on core: 0
+D (1194) cpu_start: calling init function: 0x400e2228
+D (1199) cpu_start: calling init function: 0x40085df4
+D (1204) cpu_start: calling init function: 0x400d421c
+D (1209) cpu_start: calling init function: 0x400d38bc
+D (1213) cpu_start: calling init function: 0x400df78c on core: 0
+V (1219) intr_alloc: esp_intr_alloc_intrstatus (cpu 0): checking args
+V (1225) intr_alloc: esp_intr_alloc_intrstatus (cpu 0): Args okay. Resulting flags 0xC02
+D (1233) intr_alloc: Connected src 17 to int 2 (cpu 0)
+D (1238) cpu_start: calling init function: 0x40104278 on core: 0
+D (1243) cpu_start: calling init function: 0x400d3318 on core: 0
+V (1249) intr_alloc: esp_intr_alloc_intrstatus (cpu 0): checking args
+V (1255) intr_alloc: esp_intr_alloc_intrstatus (cpu 0): Args okay. Resulting flags 0x40E
+D (1263) intr_alloc: Connected src 24 to int 3 (cpu 0)
+D (1268) app_start: Starting scheduler on CPU0
+V (1272) intr_alloc: esp_intr_alloc_intrstatus (cpu 1): checking args
+V (1272) intr_alloc: esp_intr_alloc_intrstatus (cpu 1): Args okay. Resulting flags 0x40E
+I (D (1282) intr_alloc: Connected src 25 to int 1 (cpu 1)
+D (1282) app_start: Starting scheduler on CPU1
+1272) main_task: Started on CPU0
+D (1302) heap_init: New heap initialised at 0x3ffe0440
+D (1302) heap_init: New heap initialised at 0x3ffe4350
+V (1302) intr_alloc: esp_intr_alloc_intrstatus (cpu 0): checking args
+V (1312) intr_alloc: esp_intr_alloc_intrstatus (cpu 0): Args okay. Resulting flags 0xE
+D (1312) intr_alloc: Connected src 16 to int 5 (cpu 0)
+[0;32mI (1322) main_task: Calling app_main()[0m
+V (1322) intr_alloc: esp_intr_alloc_intrstatus (cpu 0): checking args
+V (1332) intr_alloc: esp_intr_alloc_intrstatus (cpu 0): Args okay. Resulting flags 0xE
+D (1342) intr_alloc: Connected src 38 to int 8 (cpu 0)
+D (1342) clk_ctrl_os: APLL will working at 50000000 Hz with coefficients [sdm0] 0 [sdm1] 0 [sdm2] 6 [o_div] 2
+[0;32mI (1452) esp.emac: PHY Power State: 1 (Expected: 1)[0m
+[0;32mI (1452) esp.emac: CLK Power State: 0 (Expected: 1)[0m
+D (1452) efuse: BLK0 REG2 [8-15], len=8 bits
+D (1452) efuse: BLK0 REG2 [0-7], len=8 bits
+D (1452) efuse: BLK0 REG1 [24-31], len=8 bits
+D (1462) efuse: BLK0 REG1 [16-23], len=8 bits
+D (1462) efuse: BLK0 REG1 [8-15], len=8 bits
+D (1462) efuse: BLK0 REG1 [0-7], len=8 bits
+D (1472) efuse: BLK0 REG2 [16-23], len=8 bits
+D (1472) eth_phy_802_3: Found PHY address: 1
+[1;31mE (1482) eth_phy_802_3: PHY Address: 1 (Expected: 1)[0m
+[1;31mE (1482) eth_phy_802_3: Attempting to read BMCR before power control change...[0m
+[1;31mE (1492) eth_phy_802_3: BMCR Register Value (Before): 0x1100[0m
+[1;31mE (1492) eth_phy_802_3: Enabling power (Exiting power-down mode)...[0m
+[1;31mE (1502) eth_phy_802_3: BMCR Write Result: ESP_OK[0m
+[1;31mE (1502) eth_phy_802_3: Waiting for PHY to exit power-down mode...[0m
+[1;31mE (1522) eth_phy_802_3: BMCR Register Value (During Power-Up): 0x1100[0m
+[1;31mE (1522) eth_phy_802_3: PHY successfully exited power-down mode![0m
+[1;31mE (1522) eth_phy_802_3: Power control operation completed successfully.[0m
+D (1542) esp_eth: new ethernet driver @0x3ffba5dc
+D (1542) esp_netif_lwip: LwIP stack has been initialized
+D (1542) esp_netif_lwip: esp-netif has been successfully initialized
+D (1542) event: running task for loop 0x3ffbb944
+D (1552) event: created task for loop 0x3ffbb944
+D (1552) event: created event loop 0x3ffbb944
+D (1562) esp_netif_lwip: check: remote, if=0x3ffb5ab0 fn=0x400f82bc
+V (1562) esp_netif_objects: esp_netif_add_to_list_unsafe 0x3ffbc884
+D (1572) esp_netif_objects: esp_netif_add_to_list_unsafe netif added successfully (total netifs: 1)
+D (1582) esp_netif_lwip: call api in lwip: ret=0x0, give sem
+[0;32mI (1582) esp_eth.netif.netif_glue: e4:65:b8:e7:01:63[0m
+D (1592) esp_netif_lwip: check: remote, if=0x3ffbc884 fn=0x400f79d0
+D (1592) esp_netif_lwip: call api in lwip: ret=0x0, give sem
+[0;32mI (1602) esp_eth.netif.netif_glue: ethernet attached to netif[0m
+D (1602) esp_netif_lwip: check: remote, if=0x3ffbc884 fn=0x400f7e3c
+D (1612) esp_netif_lwip: esp_netif_dhcpc_stop_api esp_netif:0x3ffbc884
+D (1622) esp_netif_lwip: dhcp client stop successfully
+D (1622) esp_netif_lwip: call api in lwip: ret=0x0, give sem
+D (1632) esp_netif_lwip: check: remote, if=0x3ffbc884 fn=0x400f882c
+D (1632) esp_netif_lwip: esp_netif_set_ip_info_api esp_netif:0x3ffbc884
+D (1642) esp_netif_lwip: call api in lwip: ret=0x0, give sem
+[0;32mI (1642) ETH: Succeeded to set static IP info[0m
+[0;32mI (1652) ETH: Registering ESP_EVENT_ANY_ID handlers...[0m
+[0;32mI (1652) ETH: Registering IP_EVENT_ETH_GOT_IP handlers...[0m
+[0;32mI (1662) ETH: Registering ESP_NETIF_IP_EVENT_GOT_IP handlers...[0m
+[0;32mI (1662) esp_eth: Ethernet start function called.[0m
+[0;32mI (1672) esp_eth: Driver state updated to ESP_ETH_FSM_START.[0m
+[0;32mI (1672) esp_eth: Starting PHY auto-negotiation...[0m
+[0;32mI (3482) esp_eth: PHY auto-negotiation successful.[0m
+[0;32mI (3482) esp_eth: Posting ETHERNET_EVENT_START event...[0m
+D (3482) event: running post ETH_EVENT:0 with handler 0x400dabb0 and context 0x3ffbcaac on loop 0x3ffbb944
+D (3482) esp_eth.netif.netif_glue: eth_action_start: 0x3ffbca54, 0x3f404a4c, 0, 0x3ffba884, 0x3ffba5dc
+D (3492) esp_netif_handlers: esp_netif action has started with netif0x3ffbc884 from event_id=0
+D (3502) esp_netif_lwip: check: remote, if=0x3ffbc884 fn=0x400f84e0
+[0;32mI (3512) esp_eth: ETHERNET_EVENT_START event posted successfully.[0m
+D (3512) esp_netif_lwip: esp_netif_start_api 0x3ffbc884
+D (3522) esp_netif_lwip: esp_netif_internal_dhcpc_cb lwip-netif:0x3ffbc910
+D (3522) esp_netif_lwip: if0x3ffbc884 ip unchanged
+D (3532) esp_netif_lwip: esp_netif_get_hostname esp_netif:0x3ffbc884
+D (3532) esp_netif_lwip: check: local, if=0x3ffbc884 fn=0x400f8c7c
+D (3542) esp_netif_lwip: esp_netif_update_default_netif_lwip 0x3ffbc884
+V (3552) esp_netif_lwip: esp_netif_is_netif_up esp_netif:0x3ffbc884
+D (3552) esp_netif_lwip: call api in lwip: ret=0x0, give sem
+D (3562) event: running post ETH_EVENT:0 with handler 0x400d8f70 and context 0x3ffbcbb4 on loop 0x3ffbb944
+[0;32mI (3572) ETH: Ethernet Started[0m
+[0;32mI (3572) esp_eth: Checking PHY link status...[0m
+D (3572) esp.emac: working in 100Mbps
+D (3582) esp.emac: working in full duplex
+D (3582) esp.emac: Flow control not enabled for the link
+D (3592) esp.emac: emac started
+D (3592) event: running post ETH_EVENT:2 with handler 0x400dab20 and context 0x3ffbcb0c on loop 0x3ffbb944
+D (3602) esp_eth.netif.netif_glue: eth_action_connected: 0x3ffbca54, 0x3f404a4c, 2, 0x3ffba884, 0x3ffba5dc
+D (3612) esp_netif_handlers: esp_netif action connected with netif0x3ffbc884 from event_id=2
+D (3622) esp_netif_lwip: check: remote, if=0x3ffbc884 fn=0x400f8700
+D (3622) esp_netif_lwip: esp_netif_up_api esp_netif:0x3ffbc884
+[0;32mI (3622) esp_eth: PHY link status obtained successfully.[0m
+D (3632) esp_netif_lwip: check: local, if=0x3ffbc884 fn=0x400f8c7c
+D (3642) esp_netif_lwip: esp_netif_update_default_netif_lwip 0x3ffbc884
+V (3642) esp_netif_lwip: esp_netif_is_netif_up esp_netif:0x3ffbc884
+D (3652) esp_netif_lwip: call api in lwip: ret=0x0, give sem
+D (3662) esp_netif_lwip: esp_netif_get_ip_info esp_netif:0x3ffbc884
+D (3662) esp_netif_lwip: esp_netif_get_old_ip_info esp_netif:0x3ffbc884
+D (3672) esp_netif_lwip: check: remote, if=0x3ffbc884 fn=0x400f79fc
+D (3672) esp_netif_lwip: esp_netif_set_ip_old_info_api esp_netif:0x3ffbc884
+[0;32mI (3672) esp_eth: Starting link status timer...[0m
+D (3682) esp_netif_lwip: call api in lwip: ret=0x0, give sem
+D (3692) esp_netif_handlers: static ip: ip changed=true
+D (3702) event: running post ETH_EVENT:2 with handler 0x400d8f70 and context 0x3ffbcbb4 on loop 0x3ffbb944
+[0;32mI (3712) ETH: Ethernet Link Up[0m
+[0;32mI (3712) ETH: Ethernet HW Addr e4:65:b8:e7:01:63[0m
+D (3712) event: running post IP_EVENT:4 with handler 0x400daab0 and context 0x3ffbcb80 on loop 0x3ffbb944
+D (3722) esp_eth.netif.netif_glue: eth_action_got_ip: 0x3ffbca54, 0x3f40e988, 4, 0x3ffbcc60, 0x3ffbc884
+D (3732) esp_netif_handlers: esp_netif action got_ip with netif0x3ffbc884 from event_id=4
+[0;32mI (3742) esp_netif_handlers: eth ip: 192.168.0.50, mask: 255.255.255.0, gw: 192.168.0.1[0m
+D (3752) event: running post IP_EVENT:4 with handler 0x400d8ec0 and context 0x3ffbcbd4 on loop 0x3ffbb944
+[1;31mE (3762) ETH: Ethernet Got IP Address[0m
+[1;31mE (3762) ETH: ~~~~~~~~~~~[0m
+[1;31mE (3762) ETH: ETHIP:192.168.0.50[0m
+[1;31mE (3762) ETH: ETHMASK:255.255.255.0[0m
+[1;31mE (3772) ETH: ETHGW:192.168.0.1[0m
+[1;31mE (3772) ETH: ~~~~~~~~~~~[0m
+[0;32mI (3772) esp_eth: Ethernet started successfully.[0m
+[0;32mI (3782) ETH: ESP ETH START Done.[0m
+[0;32mI (3782) ETH: Ethernet Connection established.[0m
+[0;32mI (5782) ETH: Ethernet Initialized![0m
+[0;32mI (5782) TCP_SOCKET: Socket created[0m
+[0;32mI (5782) TCP_SOCKET: Socket bound, port 8080[0m
+[0;32mI (5782) TCP_SOCKET: Socket listening[0m
+[0;32mI (5782) TCP_SOCKET: Waiting for a connection...[0m
+[0;32mI (5782) ETH: Started TCP server task[0m
+[0;32mI (5792) main_task: Returned from app_main()[0m
+D (8852) esp.emac: receive len= 74
+D (8922) esp.emac: receive len= 60
+D (8922) esp.emac: receive len= 60
+[0;32mI (8922) TCP_SOCKET: Connection accepted from 192.168.0.162[0m
+D (8942) esp.emac: receive len= 63
+[0;32mI (8942) TCP_SOCKET: Received packet type: 0x01[0m
+[0;32mI (8942) TCP_SOCKET: START: Image dimensions: 463x280, total data: 388920 bytes[0m
+D (8942) esp.emac: receive len= 60
+D (8952) esp.emac: receive len= 1081
+D (8952) esp.emac: receive len= 1494
+[0;32mI (8952) TCP_SOCKET: Received packet type: 0x02[0m
+D (8952) esp.emac: receive len= 1494
+D (8962) esp.emac: receive len= 1494
+[0;32mI (8962) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (8962) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (8972) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (8972) TCP_SOCKET: Received packet type: 0x02[0m
+D (8972) esp.emac: receive len= 1494
+D (8982) esp.emac: receive len= 1081
+[0;32mI (8982) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (8992) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (8992) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9002) TCP_SOCKET: Received packet type: 0x02[0m
+D (9002) esp.emac: receive len= 467
+D (9002) esp.emac: receive len= 1494
+[0;32mI (9012) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9012) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9022) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9022) TCP_SOCKET: Received packet type: 0x02[0m
+D (9022) esp.emac: receive len= 1494
+[0;32mI (9032) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9032) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9042) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9042) TCP_SOCKET: Received packet type: 0x02[0m
+D (9042) esp.emac: receive len= 1494
+D (9052) esp.emac: receive len= 1483
+[0;32mI (9052) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9062) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9062) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9062) TCP_SOCKET: Received packet type: 0x02[0m
+D (9062) esp.emac: receive len= 65
+D (9072) esp.emac: receive len= 1494
+[0;32mI (9082) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9082) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9082) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9092) TCP_SOCKET: Received packet type: 0x02[0m
+D (9092) esp.emac: receive len= 1494
+[0;32mI (9102) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9102) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9102) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9112) TCP_SOCKET: Received packet type: 0x02[0m
+D (9112) esp.emac: receive len= 1494
+D (9122) esp.emac: receive len= 1494
+[0;32mI (9122) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9122) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9132) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9132) TCP_SOCKET: Received packet type: 0x02[0m
+D (9132) esp.emac: receive len= 1494
+D (9142) esp.emac: receive len= 1059
+[0;32mI (9142) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9152) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9152) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9162) TCP_SOCKET: Received packet type: 0x02[0m
+D (9162) esp.emac: receive len= 489
+D (9162) esp.emac: receive len= 1494
+[0;32mI (9172) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9172) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9182) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9182) TCP_SOCKET: Received packet type: 0x02[0m
+D (9182) esp.emac: receive len= 1494
+[0;32mI (9192) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9192) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9202) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9202) TCP_SOCKET: Received packet type: 0x02[0m
+D (9202) esp.emac: receive len= 1494
+D (9212) esp.emac: receive len= 1461
+[0;32mI (9212) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9212) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9222) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9222) TCP_SOCKET: Received packet type: 0x02[0m
+D (9232) esp.emac: receive len= 87
+D (9232) esp.emac: receive len= 1494
+[0;32mI (9242) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9242) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9242) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9252) TCP_SOCKET: Received packet type: 0x02[0m
+D (9252) esp.emac: receive len= 1494
+[0;32mI (9262) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9262) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9262) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9272) TCP_SOCKET: Received packet type: 0x02[0m
+D (9272) esp.emac: receive len= 1494
+D (9282) esp.emac: receive len= 1494
+[0;32mI (9282) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9282) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9292) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9292) TCP_SOCKET: Received packet type: 0x02[0m
+D (9292) esp.emac: receive len= 1494
+D (9302) esp.emac: receive len= 1037
+[0;32mI (9302) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9312) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9312) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9322) TCP_SOCKET: Received packet type: 0x02[0m
+D (9322) esp.emac: receive len= 511
+D (9322) esp.emac: receive len= 1494
+[0;32mI (9332) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9332) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9342) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9342) TCP_SOCKET: Received packet type: 0x02[0m
+D (9342) esp.emac: receive len= 1494
+[0;32mI (9352) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9352) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9362) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9362) TCP_SOCKET: Received packet type: 0x02[0m
+D (9362) esp.emac: receive len= 1494
+D (9372) esp.emac: receive len= 1439
+[0;32mI (9372) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9372) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9382) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9382) TCP_SOCKET: Received packet type: 0x02[0m
+D (9382) esp.emac: receive len= 109
+D (9392) esp.emac: receive len= 1494
+[0;32mI (9392) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9402) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9402) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9412) TCP_SOCKET: Received packet type: 0x02[0m
+D (9412) esp.emac: receive len= 1494
+[0;32mI (9422) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9422) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9422) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9432) TCP_SOCKET: Received packet type: 0x02[0m
+D (9432) esp.emac: receive len= 1494
+D (9442) esp.emac: receive len= 1494
+[0;32mI (9442) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9442) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9452) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9452) TCP_SOCKET: Received packet type: 0x02[0m
+D (9452) esp.emac: receive len= 1494
+D (9462) esp.emac: receive len= 1015
+[0;32mI (9462) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9472) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9472) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9472) TCP_SOCKET: Received packet type: 0x02[0m
+D (9482) esp.emac: receive len= 533
+D (9482) esp.emac: receive len= 1494
+[0;32mI (9492) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9492) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9492) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9502) TCP_SOCKET: Received packet type: 0x02[0m
+D (9502) esp.emac: receive len= 1494
+[0;32mI (9512) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9512) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9522) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9522) TCP_SOCKET: Received packet type: 0x02[0m
+D (9522) esp.emac: receive len= 1494
+D (9532) esp.emac: receive len= 1417
+[0;32mI (9532) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9532) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9542) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9542) TCP_SOCKET: Received packet type: 0x02[0m
+D (9542) esp.emac: receive len= 131
+D (9552) esp.emac: receive len= 1494
+[0;32mI (9552) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9562) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9562) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9572) TCP_SOCKET: Received packet type: 0x02[0m
+D (9572) esp.emac: receive len= 1494
+[0;32mI (9572) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9582) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9582) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9592) TCP_SOCKET: Received packet type: 0x02[0m
+D (9592) esp.emac: receive len= 1494
+D (9602) esp.emac: receive len= 1494
+[0;32mI (9602) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9602) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9612) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9612) TCP_SOCKET: Received packet type: 0x02[0m
+D (9612) esp.emac: receive len= 1494
+D (9622) esp.emac: receive len= 993
+[0;32mI (9622) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9632) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9632) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9632) TCP_SOCKET: Received packet type: 0x02[0m
+D (9642) esp.emac: receive len= 555
+D (9642) esp.emac: receive len= 1494
+[0;32mI (9652) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9652) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9652) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9662) TCP_SOCKET: Received packet type: 0x02[0m
+D (9662) esp.emac: receive len= 1494
+[0;32mI (9672) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9672) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9672) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9682) TCP_SOCKET: Received packet type: 0x02[0m
+D (9682) esp.emac: receive len= 1494
+D (9692) esp.emac: receive len= 1395
+[0;32mI (9692) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9692) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9702) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9702) TCP_SOCKET: Received packet type: 0x02[0m
+D (9702) esp.emac: receive len= 153
+D (9712) esp.emac: receive len= 1494
+[0;32mI (9712) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9722) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9722) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9732) TCP_SOCKET: Received packet type: 0x02[0m
+D (9732) esp.emac: receive len= 1494
+[0;32mI (9732) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9742) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9742) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9752) TCP_SOCKET: Received packet type: 0x02[0m
+D (9752) esp.emac: receive len= 1494
+D (9752) esp.emac: receive len= 1494
+[0;32mI (9762) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9762) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9772) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9772) TCP_SOCKET: Received packet type: 0x02[0m
+D (9772) esp.emac: receive len= 1494
+D (9782) esp.emac: receive len= 971
+[0;32mI (9782) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9792) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9792) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9792) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9802) TCP_SOCKET: DATA packet (1024 bytes):[0m
+D (9802) esp.emac: receive len= 577
+D (9812) esp.emac: receive len= 1494
+
+[0;32mI (9812) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9812) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9822) TCP_SOCKET: Received packet type: 0x02[0m
+D (9822) esp.emac: receive len= 1494
+[0;32mI (9832) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9832) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9832) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9842) TCP_SOCKET: Received packet type: 0x02[0m
+D (9842) esp.emac: receive len= 1494
+[0;32mI (9852) TCP_SOCKET: DATA packet (1024 bytes):[0m
+D (9852) esp.emac: receive len= 1373
+
+[0;32mI (9852) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9862) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9862) TCP_SOCKET: Received packet type: 0x02[0m
+D (9862) esp.emac: receive len= 175
+D (9872) esp.emac: receive len= 1494
+[0;32mI (9872) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9882) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9882) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9892) TCP_SOCKET: Received packet type: 0x02[0m
+D (9892) esp.emac: receive len= 1494
+[0;32mI (9892) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9902) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9902) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9912) TCP_SOCKET: Received packet type: 0x02[0m
+D (9912) esp.emac: receive len= 1494
+D (9912) esp.emac: receive len= 1494
+[0;32mI (9922) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9922) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9932) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9932) TCP_SOCKET: Received packet type: 0x02[0m
+D (9932) esp.emac: receive len= 1494
+D (9942) esp.emac: receive len= 949
+[0;32mI (9942) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9952) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9952) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9952) TCP_SOCKET: Received packet type: 0x02[0m
+D (9952) esp.emac: receive len= 599
+D (9962) esp.emac: receive len= 1494
+[0;32mI (9972) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9972) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9972) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9982) TCP_SOCKET: Received packet type: 0x02[0m
+D (9982) esp.emac: receive len= 1494
+[0;32mI (9992) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (9992) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (9992) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10002) TCP_SOCKET: Received packet type: 0x02[0m
+D (10002) esp.emac: receive len= 1494
+D (10012) esp.emac: receive len= 1351
+[0;32mI (10012) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10012) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10022) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10022) TCP_SOCKET: Received packet type: 0x02[0m
+D (10022) esp.emac: receive len= 197
+D (10032) esp.emac: receive len= 1494
+[0;32mI (10032) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10042) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10042) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10052) TCP_SOCKET: Received packet type: 0x02[0m
+D (10052) esp.emac: receive len= 1494
+[0;32mI (10062) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10062) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10062) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10072) TCP_SOCKET: Received packet type: 0x02[0m
+D (10072) esp.emac: receive len= 1494
+D (10082) esp.emac: receive len= 1494
+[0;32mI (10082) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10082) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10092) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10092) TCP_SOCKET: Received packet type: 0x02[0m
+D (10092) esp.emac: receive len= 1494
+D (10102) esp.emac: receive len= 927
+[0;32mI (10102) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10112) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10112) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10122) TCP_SOCKET: Received packet type: 0x02[0m
+D (10122) esp.emac: receive len= 621
+D (10122) esp.emac: receive len= 1494
+[0;32mI (10132) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10132) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10142) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10142) TCP_SOCKET: Received packet type: 0x02[0m
+D (10142) esp.emac: receive len= 1494
+[0;32mI (10152) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10152) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10162) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10162) TCP_SOCKET: Received packet type: 0x02[0m
+D (10162) esp.emac: receive len= 1494
+D (10172) esp.emac: receive len= 1329
+[0;32mI (10172) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10182) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10182) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10192) TCP_SOCKET: Received packet type: 0x02[0m
+D (10192) esp.emac: receive len= 219
+D (10192) esp.emac: receive len= 1494
+[0;32mI (10202) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10202) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10212) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+D (10212) esp.emac: receive len= 1494
+[0;32mI (10212) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10222) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10222) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10232) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10232) TCP_SOCKET: Received packet type: 0x02[0m
+D (10232) esp.emac: receive len= 1494
+D (10242) esp.emac: receive len= 1494
+[0;32mI (10242) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10252) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10252) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10252) TCP_SOCKET: Received packet type: 0x02[0m
+D (10262) esp.emac: receive len= 1494
+D (10262) esp.emac: receive len= 905
+[0;32mI (10272) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10272) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10282) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10282) TCP_SOCKET: Received packet type: 0x02[0m
+D (10282) esp.emac: receive len= 643
+D (10292) esp.emac: receive len= 1494
+[0;32mI (10292) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10292) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10302) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10302) TCP_SOCKET: Received packet type: 0x02[0m
+D (10302) esp.emac: receive len= 1494
+[0;32mI (10312) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10322) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10322) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10322) TCP_SOCKET: Received packet type: 0x02[0m
+D (10332) esp.emac: receive len= 1494
+D (10332) esp.emac: receive len= 1307
+[0;32mI (10342) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10342) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10342) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10352) TCP_SOCKET: Received packet type: 0x02[0m
+D (10352) esp.emac: receive len= 241
+D (10362) esp.emac: receive len= 1494
+[0;32mI (10362) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10362) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10372) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10372) TCP_SOCKET: Received packet type: 0x02[0m
+D (10372) esp.emac: receive len= 1494
+[0;32mI (10382) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10382) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10392) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10392) TCP_SOCKET: Received packet type: 0x02[0m
+D (10392) esp.emac: receive len= 1494
+D (10402) esp.emac: receive len= 1494
+[0;32mI (10412) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10412) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10412) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10422) TCP_SOCKET: Received packet type: 0x02[0m
+D (10422) esp.emac: receive len= 1494
+D (10432) esp.emac: receive len= 883
+[0;32mI (10432) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10432) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10442) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10442) TCP_SOCKET: Received packet type: 0x02[0m
+D (10442) esp.emac: receive len= 665
+D (10452) esp.emac: receive len= 1494
+[0;32mI (10452) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10462) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10462) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10472) TCP_SOCKET: Received packet type: 0x02[0m
+D (10472) esp.emac: receive len= 1494
+[0;32mI (10472) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10482) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10482) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10492) TCP_SOCKET: Received packet type: 0x02[0m
+D (10492) esp.emac: receive len= 1494
+D (10502) esp.emac: receive len= 1285
+[0;32mI (10502) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10502) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10512) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10512) TCP_SOCKET: Received packet type: 0x02[0m
+D (10512) esp.emac: receive len= 263
+[0;32mI (10522) TCP_SOCKET: DATA packet (1024 bytes):[0m
+D (10522) esp.emac: receive len= 1494
+
+[0;32mI (10532) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10532) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10542) TCP_SOCKET: Received packet type: 0x02[0m
+D (10542) esp.emac: receive len= 1494
+[0;32mI (10542) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10552) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10552) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10562) TCP_SOCKET: Received packet type: 0x02[0m
+D (10562) esp.emac: receive len= 1494
+D (10562) esp.emac: receive len= 1494
+[0;32mI (10572) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10572) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10582) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10582) TCP_SOCKET: Received packet type: 0x02[0m
+D (10582) esp.emac: receive len= 1494
+D (10592) esp.emac: receive len= 861
+[0;32mI (10592) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10602) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10602) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+D (10612) esp.emac: receive len= 687
+[0;32mI (10612) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10612) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10622) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10622) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10632) TCP_SOCKET: Received packet type: 0x02[0m
+D (10632) esp.emac: receive len= 1494
+D (10632) esp.emac: receive len= 1494
+[0;32mI (10642) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10642) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10652) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10652) TCP_SOCKET: Received packet type: 0x02[0m
+D (10652) esp.emac: receive len= 1494
+D (10662) esp.emac: receive len= 1263
+[0;32mI (10662) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10672) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10672) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10672) TCP_SOCKET: Received packet type: 0x02[0m
+D (10682) esp.emac: receive len= 285
+D (10682) esp.emac: receive len= 1494
+[0;32mI (10692) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10692) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10692) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10702) TCP_SOCKET: Received packet type: 0x02[0m
+D (10702) esp.emac: receive len= 1494
+[0;32mI (10712) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10712) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10722) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10722) TCP_SOCKET: Received packet type: 0x02[0m
+D (10722) esp.emac: receive len= 1494
+D (10732) esp.emac: receive len= 1494
+[0;32mI (10732) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10742) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10742) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10742) TCP_SOCKET: Received packet type: 0x02[0m
+D (10742) esp.emac: receive len= 1494
+D (10752) esp.emac: receive len= 839
+[0;32mI (10762) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10762) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10762) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10772) TCP_SOCKET: Received packet type: 0x02[0m
+D (10772) esp.emac: receive len= 709
+[0;32mI (10782) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10782) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10792) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10792) TCP_SOCKET: Received packet type: 0x02[0m
+D (10792) esp.emac: receive len= 1494
+D (10802) esp.emac: receive len= 1494
+[0;32mI (10802) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10802) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10812) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10812) TCP_SOCKET: Received packet type: 0x02[0m
+D (10812) esp.emac: receive len= 1494
+D (10822) esp.emac: receive len= 1241
+[0;32mI (10832) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10832) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10832) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10842) TCP_SOCKET: Received packet type: 0x02[0m
+D (10842) esp.emac: receive len= 307
+D (10852) esp.emac: receive len= 1494
+[0;32mI (10852) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10852) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10862) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10862) TCP_SOCKET: Received packet type: 0x02[0m
+D (10862) esp.emac: receive len= 1494
+[0;32mI (10872) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10872) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10882) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10882) TCP_SOCKET: Received packet type: 0x02[0m
+D (10882) esp.emac: receive len= 1494
+D (10892) esp.emac: receive len= 1494
+[0;32mI (10892) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10902) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10902) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10912) TCP_SOCKET: Received packet type: 0x02[0m
+D (10912) esp.emac: receive len= 1494
+D (10922) esp.emac: receive len= 817
+[0;32mI (10922) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10922) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10932) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10932) TCP_SOCKET: Received packet type: 0x02[0m
+D (10932) esp.emac: receive len= 731
+[0;32mI (10942) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10942) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10952) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10952) TCP_SOCKET: Received packet type: 0x02[0m
+D (10952) esp.emac: receive len= 1494
+D (10962) esp.emac: receive len= 1494
+[0;32mI (10962) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10972) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (10972) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10982) TCP_SOCKET: Received packet type: 0x02[0m
+D (10982) esp.emac: receive len= 1494
+D (10982) esp.emac: receive len= 1219
+[0;32mI (10992) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (10992) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11002) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11002) TCP_SOCKET: Received packet type: 0x02[0m
+D (11002) esp.emac: receive len= 329
+[0;32mI (11012) TCP_SOCKET: DATA packet (1024 bytes):[0m
+D (11012) esp.emac: receive len= 1494
+
+[0;32mI (11022) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11022) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11032) TCP_SOCKET: Received packet type: 0x02[0m
+D (11032) esp.emac: receive len= 1494
+[0;32mI (11032) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11042) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11042) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11052) TCP_SOCKET: Received packet type: 0x02[0m
+D (11052) esp.emac: receive len= 1494
+D (11052) esp.emac: receive len= 1494
+[0;32mI (11062) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11062) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11072) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11072) TCP_SOCKET: Received packet type: 0x02[0m
+D (11072) esp.emac: receive len= 1494
+D (11082) esp.emac: receive len= 795
+[0;32mI (11082) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11092) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11092) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11092) TCP_SOCKET: Received packet type: 0x02[0m
+D (11102) esp.emac: receive len= 753
+[0;32mI (11102) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11112) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11112) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11122) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11122) TCP_SOCKET: DATA packet (1024 bytes):[0m
+D (11122) esp.emac: receive len= 1494
+D (11132) esp.emac: receive len= 1494
+
+[0;32mI (11132) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11142) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11142) TCP_SOCKET: Received packet type: 0x03[0m
+D (11142) esp.emac: receive len= 1494
+[0;32mI (11152) TCP_SOCKET: MID packet received (halfway marker). Total received so far: 194560 bytes[0m
+D (11152) esp.emac: receive len= 1197
+[0;32mI (11162) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11162) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11172) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11172) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11182) TCP_SOCKET: Received packet type: 0x02[0m
+D (11182) esp.emac: receive len= 351
+D (11192) esp.emac: receive len= 1494
+[0;32mI (11192) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11192) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11202) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11202) TCP_SOCKET: Received packet type: 0x02[0m
+D (11202) esp.emac: receive len= 1494
+[0;32mI (11212) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11212) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11222) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11222) TCP_SOCKET: Received packet type: 0x02[0m
+D (11222) esp.emac: receive len= 1494
+D (11232) esp.emac: receive len= 1494
+[0;32mI (11232) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11242) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11242) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11252) TCP_SOCKET: Received packet type: 0x02[0m
+D (11252) esp.emac: receive len= 1494
+D (11252) esp.emac: receive len= 776
+[0;32mI (11262) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11262) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11272) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11272) TCP_SOCKET: Received packet type: 0x02[0m
+D (11272) esp.emac: receive len= 772
+[0;32mI (11282) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11282) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11292) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11292) TCP_SOCKET: Received packet type: 0x02[0m
+D (11292) esp.emac: receive len= 1494
+D (11302) esp.emac: receive len= 1494
+[0;32mI (11302) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11312) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11312) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11322) TCP_SOCKET: Received packet type: 0x02[0m
+D (11322) esp.emac: receive len= 1494
+D (11322) esp.emac: receive len= 1178
+[0;32mI (11332) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11332) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11342) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11342) TCP_SOCKET: Received packet type: 0x02[0m
+D (11342) esp.emac: receive len= 370
+D (11352) esp.emac: receive len= 1494
+[0;32mI (11352) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11362) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11362) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11362) TCP_SOCKET: Received packet type: 0x02[0m
+D (11362) esp.emac: receive len= 1494
+[0;32mI (11372) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11382) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11382) TCP_SOCKET: DATA packet (1024 bytes):[0m
+D (11382) esp.emac: receive len= 1494
+
+D (11392) esp.emac: receive len= 1494
+[0;32mI (11392) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11402) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11402) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11412) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11412) TCP_SOCKET: Received packet type: 0x02[0m
+D (11412) esp.emac: receive len= 1494
+[0;32mI (11422) TCP_SOCKET: DATA packet (1024 bytes):[0m
+D (11422) esp.emac: receive len= 754
+
+[0;32mI (11432) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11432) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11432) TCP_SOCKET: Received packet type: 0x02[0m
+D (11432) esp.emac: receive len= 794
+[0;32mI (11442) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11452) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11452) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11452) TCP_SOCKET: Received packet type: 0x02[0m
+D (11462) esp.emac: receive len= 1494
+D (11462) esp.emac: receive len= 1494
+[0;32mI (11472) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11472) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11472) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11482) TCP_SOCKET: Received packet type: 0x02[0m
+D (11482) esp.emac: receive len= 1494
+D (11492) esp.emac: receive len= 1156
+[0;32mI (11492) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11492) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11502) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11502) TCP_SOCKET: Received packet type: 0x02[0m
+D (11502) esp.emac: receive len= 392
+D (11512) esp.emac: receive len= 1494
+[0;32mI (11512) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11522) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11522) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11532) TCP_SOCKET: Received packet type: 0x02[0m
+D (11532) esp.emac: receive len= 1494
+[0;32mI (11542) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11542) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11542) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11552) TCP_SOCKET: Received packet type: 0x02[0m
+D (11552) esp.emac: receive len= 1494
+D (11562) esp.emac: receive len= 1494
+[0;32mI (11562) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11562) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11572) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11572) TCP_SOCKET: Received packet type: 0x02[0m
+D (11572) esp.emac: receive len= 1494
+D (11582) esp.emac: receive len= 732
+[0;32mI (11582) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11592) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11592) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11602) TCP_SOCKET: Received packet type: 0x02[0m
+D (11602) esp.emac: receive len= 816
+[0;32mI (11612) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11612) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11612) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11622) TCP_SOCKET: Received packet type: 0x02[0m
+D (11622) esp.emac: receive len= 1494
+D (11632) esp.emac: receive len= 1494
+[0;32mI (11632) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11632) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11642) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11642) TCP_SOCKET: Received packet type: 0x02[0m
+D (11642) esp.emac: receive len= 1494
+D (11652) esp.emac: receive len= 1134
+[0;32mI (11652) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11662) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11662) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11672) TCP_SOCKET: Received packet type: 0x02[0m
+D (11672) esp.emac: receive len= 414
+D (11672) esp.emac: receive len= 1494
+[0;32mI (11682) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11682) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11692) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11692) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11692) TCP_SOCKET: DATA packet (1024 bytes):[0m
+D (11702) esp.emac: receive len= 1494
+
+[0;32mI (11702) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11712) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11712) TCP_SOCKET: Received packet type: 0x02[0m
+D (11712) esp.emac: receive len= 1494
+[0;32mI (11722) TCP_SOCKET: DATA packet (1024 bytes):[0m
+D (11722) esp.emac: receive len= 1494
+
+[0;32mI (11732) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11732) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11742) TCP_SOCKET: Received packet type: 0x02[0m
+D (11742) esp.emac: receive len= 1494
+D (11742) esp.emac: receive len= 710
+[0;32mI (11752) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11752) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11762) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11762) TCP_SOCKET: Received packet type: 0x02[0m
+D (11762) esp.emac: receive len= 838
+[0;32mI (11772) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11772) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11782) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11782) TCP_SOCKET: Received packet type: 0x02[0m
+D (11782) esp.emac: receive len= 1494
+[0;32mI (11792) TCP_SOCKET: DATA packet (1024 bytes):[0m
+D (11792) esp.emac: receive len= 1494
+
+[0;32mI (11802) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11802) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11802) TCP_SOCKET: Received packet type: 0x02[0m
+D (11812) esp.emac: receive len= 1494
+D (11812) esp.emac: receive len= 1112
+[0;32mI (11822) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11822) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11832) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11832) TCP_SOCKET: Received packet type: 0x02[0m
+D (11832) esp.emac: receive len= 436
+D (11842) esp.emac: receive len= 1494
+[0;32mI (11842) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11842) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11852) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11852) TCP_SOCKET: Received packet type: 0x02[0m
+D (11852) esp.emac: receive len= 1494
+[0;32mI (11862) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11872) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11872) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11872) TCP_SOCKET: Received packet type: 0x02[0m
+D (11872) esp.emac: receive len= 1494
+D (11882) esp.emac: receive len= 1494
+[0;32mI (11892) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11892) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11892) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11902) TCP_SOCKET: Received packet type: 0x02[0m
+D (11902) esp.emac: receive len= 1494
+D (11912) esp.emac: receive len= 688
+[0;32mI (11912) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11912) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11922) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+D (11922) esp.emac: receive len= 860
+[0;32mI (11922) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11932) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11932) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11942) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11942) TCP_SOCKET: Received packet type: 0x02[0m
+D (11942) esp.emac: receive len= 1494
+D (11952) esp.emac: receive len= 1494
+[0;32mI (11962) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11962) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11962) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11972) TCP_SOCKET: Received packet type: 0x02[0m
+D (11972) esp.emac: receive len= 1494
+D (11982) esp.emac: receive len= 1090
+[0;32mI (11982) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11982) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (11992) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (11992) TCP_SOCKET: Received packet type: 0x02[0m
+D (11992) esp.emac: receive len= 458
+D (12002) esp.emac: receive len= 1494
+[0;32mI (12002) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12012) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12012) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12022) TCP_SOCKET: Received packet type: 0x02[0m
+D (12022) esp.emac: receive len= 1494
+[0;32mI (12032) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12032) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12032) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12042) TCP_SOCKET: Received packet type: 0x02[0m
+D (12042) esp.emac: receive len= 1494
+D (12052) esp.emac: receive len= 1492
+[0;32mI (12052) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12052) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12062) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12062) TCP_SOCKET: Received packet type: 0x02[0m
+D (12062) esp.emac: receive len= 60
+D (12072) esp.emac: receive len= 1494
+[0;32mI (12072) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12082) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12082) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12092) TCP_SOCKET: Received packet type: 0x02[0m
+D (12092) esp.emac: receive len= 1494
+[0;32mI (12092) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12102) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12102) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12112) TCP_SOCKET: Received packet type: 0x02[0m
+D (12112) esp.emac: receive len= 1494
+D (12112) esp.emac: receive len= 1494
+[0;32mI (12122) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12122) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12132) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12132) TCP_SOCKET: Received packet type: 0x02[0m
+D (12132) esp.emac: receive len= 1494
+[0;32mI (12142) TCP_SOCKET: DATA packet (1024 bytes):[0m
+D (12142) esp.emac: receive len= 1068
+
+[0;32mI (12152) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12152) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+D (12162) esp.emac: receive len= 480
+[0;32mI (12162) TCP_SOCKET: Received packet type: 0x02[0m
+D (12162) esp.emac: receive len= 1494
+[0;32mI (12172) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12172) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12182) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12182) TCP_SOCKET: Received packet type: 0x02[0m
+D (12182) esp.emac: receive len= 1494
+[0;32mI (12192) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12192) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12202) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12202) TCP_SOCKET: Received packet type: 0x02[0m
+D (12202) esp.emac: receive len= 1494
+D (12212) esp.emac: receive len= 1470
+[0;32mI (12212) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12222) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12222) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+D (12222) esp.emac: receive len= 78
+D (12232) esp.emac: receive len= 1494
+[0;32mI (12232) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12242) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12242) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12252) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12252) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12252) TCP_SOCKET: DATA packet (1024 bytes):[0m
+D (12252) esp.emac: receive len= 1494
+
+[0;32mI (12262) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12272) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12272) TCP_SOCKET: Received packet type: 0x02[0m
+D (12272) esp.emac: receive len= 1494
+[0;32mI (12282) TCP_SOCKET: DATA packet (1024 bytes):[0m
+D (12282) esp.emac: receive len= 1494
+
+[0;32mI (12292) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12292) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12292) TCP_SOCKET: Received packet type: 0x02[0m
+D (12292) esp.emac: receive len= 1494
+D (12302) esp.emac: receive len= 1046
+[0;32mI (12312) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12312) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12312) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+D (12322) esp.emac: receive len= 502
+D (12322) esp.emac: receive len= 1494
+[0;32mI (12332) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12332) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12332) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12342) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12342) TCP_SOCKET: Received packet type: 0x02[0m
+D (12342) esp.emac: receive len= 1494
+[0;32mI (12352) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12352) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12362) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12362) TCP_SOCKET: Received packet type: 0x02[0m
+D (12362) esp.emac: receive len= 1494
+D (12372) esp.emac: receive len= 1448
+[0;32mI (12382) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12382) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12382) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12392) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12392) TCP_SOCKET: DATA packet (1024 bytes):[0m
+D (12392) esp.emac: receive len= 100
+
+D (12402) esp.emac: receive len= 1494
+[0;32mI (12402) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12412) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12412) TCP_SOCKET: Received packet type: 0x02[0m
+D (12412) esp.emac: receive len= 1494
+[0;32mI (12422) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12422) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12432) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12432) TCP_SOCKET: Received packet type: 0x02[0m
+D (12432) esp.emac: receive len= 1494
+D (12442) esp.emac: receive len= 1494
+[0;32mI (12452) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12452) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12452) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12462) TCP_SOCKET: Received packet type: 0x02[0m
+D (12462) esp.emac: receive len= 1494
+D (12472) esp.emac: receive len= 1024
+[0;32mI (12472) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12472) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12482) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+D (12482) esp.emac: receive len= 524
+D (12492) esp.emac: receive len= 1494
+[0;32mI (12482) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12492) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12502) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12502) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12512) TCP_SOCKET: Received packet type: 0x02[0m
+D (12512) esp.emac: receive len= 1494
+[0;32mI (12512) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12522) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12522) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12532) TCP_SOCKET: Received packet type: 0x02[0m
+D (12532) esp.emac: receive len= 1494
+D (12542) esp.emac: receive len= 1426
+[0;32mI (12542) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12542) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12552) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12552) TCP_SOCKET: Received packet type: 0x02[0m
+D (12552) esp.emac: receive len= 122
+[0;32mI (12562) TCP_SOCKET: DATA packet (1024 bytes):[0m
+D (12562) esp.emac: receive len= 1494
+
+[0;32mI (12572) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12572) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12582) TCP_SOCKET: Received packet type: 0x02[0m
+D (12582) esp.emac: receive len= 1494
+[0;32mI (12582) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12592) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12592) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12602) TCP_SOCKET: Received packet type: 0x02[0m
+D (12602) esp.emac: receive len= 1494
+D (12602) esp.emac: receive len= 1494
+[0;32mI (12612) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12612) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12622) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12622) TCP_SOCKET: Received packet type: 0x02[0m
+D (12622) esp.emac: receive len= 1494
+[0;32mI (12632) TCP_SOCKET: DATA packet (1024 bytes):[0m
+D (12632) esp.emac: receive len= 1002
+
+[0;32mI (12642) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12642) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12642) TCP_SOCKET: Received packet type: 0x02[0m
+D (12652) esp.emac: receive len= 546
+D (12652) esp.emac: receive len= 1494
+[0;32mI (12662) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12662) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12672) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12672) TCP_SOCKET: Received packet type: 0x02[0m
+D (12672) esp.emac: receive len= 1494
+[0;32mI (12682) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12682) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12692) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12692) TCP_SOCKET: Received packet type: 0x02[0m
+D (12692) esp.emac: receive len= 1494
+D (12702) esp.emac: receive len= 1404
+[0;32mI (12702) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12712) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12712) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12712) TCP_SOCKET: Received packet type: 0x02[0m
+D (12712) esp.emac: receive len= 144
+D (12722) esp.emac: receive len= 1494
+[0;32mI (12732) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12732) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12732) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12742) TCP_SOCKET: Received packet type: 0x02[0m
+D (12742) esp.emac: receive len= 1494
+[0;32mI (12752) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12752) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12762) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12762) TCP_SOCKET: Received packet type: 0x02[0m
+D (12762) esp.emac: receive len= 1494
+D (12772) esp.emac: receive len= 1494
+[0;32mI (12772) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12782) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12782) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12782) TCP_SOCKET: Received packet type: 0x02[0m
+D (12782) esp.emac: receive len= 1494
+D (12792) esp.emac: receive len= 980
+[0;32mI (12802) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12802) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12802) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12812) TCP_SOCKET: Received packet type: 0x02[0m
+D (12812) esp.emac: receive len= 568
+D (12822) esp.emac: receive len= 1494
+[0;32mI (12822) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12822) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12832) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12832) TCP_SOCKET: Received packet type: 0x02[0m
+D (12832) esp.emac: receive len= 1494
+[0;32mI (12842) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12842) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12852) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12852) TCP_SOCKET: Received packet type: 0x02[0m
+D (12852) esp.emac: receive len= 1494
+D (12862) esp.emac: receive len= 1382
+[0;32mI (12872) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12872) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12872) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12882) TCP_SOCKET: Received packet type: 0x02[0m
+D (12882) esp.emac: receive len= 166
+D (12892) esp.emac: receive len= 1494
+[0;32mI (12892) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12892) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12902) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12902) TCP_SOCKET: Received packet type: 0x02[0m
+D (12902) esp.emac: receive len= 1494
+[0;32mI (12912) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12912) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12922) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12922) TCP_SOCKET: Received packet type: 0x02[0m
+D (12922) esp.emac: receive len= 1494
+D (12932) esp.emac: receive len= 1494
+[0;32mI (12932) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12942) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12942) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12952) TCP_SOCKET: Received packet type: 0x02[0m
+D (12952) esp.emac: receive len= 1494
+D (12962) esp.emac: receive len= 958
+[0;32mI (12962) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12962) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12972) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12972) TCP_SOCKET: Received packet type: 0x02[0m
+D (12972) esp.emac: receive len= 590
+D (12982) esp.emac: receive len= 1494
+[0;32mI (12982) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (12992) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (12992) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13002) TCP_SOCKET: Received packet type: 0x02[0m
+D (13002) esp.emac: receive len= 1494
+[0;32mI (13002) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13012) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (13012) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13022) TCP_SOCKET: Received packet type: 0x02[0m
+D (13022) esp.emac: receive len= 1494
+D (13022) esp.emac: receive len= 1360
+[0;32mI (13032) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13032) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (13042) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13042) TCP_SOCKET: Received packet type: 0x02[0m
+D (13042) esp.emac: receive len= 188
+D (13052) esp.emac: receive len= 1494
+[0;32mI (13052) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13062) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (13062) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13062) TCP_SOCKET: Received packet type: 0x02[0m
+D (13072) esp.emac: receive len= 1494
+[0;32mI (13072) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13082) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (13082) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13092) TCP_SOCKET: Received packet type: 0x02[0m
+D (13092) esp.emac: receive len= 1494
+D (13092) esp.emac: receive len= 1494
+[0;32mI (13102) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13102) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (13112) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13112) TCP_SOCKET: Received packet type: 0x02[0m
+D (13112) esp.emac: receive len= 1494
+D (13122) esp.emac: receive len= 936
+[0;32mI (13122) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13132) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (13132) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+D (13132) esp.emac: receive len= 612
+[0;32mI (13132) TCP_SOCKET: Received packet type: 0x02[0m
+D (13142) esp.emac: receive len= 1494
+[0;32mI (13152) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13152) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (13152) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13162) TCP_SOCKET: Received packet type: 0x02[0m
+D (13162) esp.emac: receive len= 1494
+[0;32mI (13172) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13172) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (13182) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13182) TCP_SOCKET: Received packet type: 0x02[0m
+D (13182) esp.emac: receive len= 1494
+D (13192) esp.emac: receive len= 1338
+[0;32mI (13192) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13192) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (13202) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13202) TCP_SOCKET: Received packet type: 0x02[0m
+D (13202) esp.emac: receive len= 210
+D (13212) esp.emac: receive len= 1494
+[0;32mI (13222) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13222) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (13222) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13232) TCP_SOCKET: Received packet type: 0x02[0m
+D (13232) esp.emac: receive len= 1494
+[0;32mI (13242) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13242) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (13242) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13252) TCP_SOCKET: Received packet type: 0x02[0m
+D (13252) esp.emac: receive len= 1494
+D (13262) esp.emac: receive len= 1494
+[0;32mI (13262) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13262) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (13272) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13272) TCP_SOCKET: Received packet type: 0x02[0m
+D (13272) esp.emac: receive len= 1494
+D (13282) esp.emac: receive len= 914
+[0;32mI (13292) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13292) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (13292) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13302) TCP_SOCKET: Received packet type: 0x02[0m
+D (13302) esp.emac: receive len= 634
+D (13312) esp.emac: receive len= 1494
+[0;32mI (13312) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13312) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (13322) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13322) TCP_SOCKET: Received packet type: 0x02[0m
+D (13322) esp.emac: receive len= 295
+[0;32mI (13332) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13332) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (13342) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13342) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (13352) TCP_SOCKET: DATA packet (1024 bytes):[0m
+
+[0;32mI (13352) TCP_SOCKET: Received packet type: 0x02[0m
+[0;32mI (13362) TCP_SOCKET: DATA packet (824 bytes):[0m
+
+[0;32mI (13362) TCP_SOCKET: Received packet type: 0x04[0m
+[0;32mI (13362) TCP_SOCKET: END packet received. Received checksum: 0x047F5F5B, Computed checksum: 0x00000000[0m
+[1;31mE (13372) TCP_SOCKET: Checksum mismatch![0m
+[1;31mE (13382) TCP_SOCKET: Image transfer error occurred.[0m
+[0;32mI (13382) TCP_SOCKET: Socket listening[0m
+[0;32mI (13392) TCP_SOCKET: Waiting for a connection...[0m
+D (13392) esp.emac: receive len= 60
+D (13592) esp.emac: receive len= 60
+D (15852) esp.emac: receive len= 428
+D (15852) esp.emac: receive len= 437
+D (15952) esp.emac: receive len= 500
+D (16052) esp.emac: receive len= 496
+D (16162) esp.emac: receive len= 476
+D (16262) esp.emac: receive len= 508
+D (16372) esp.emac: receive len= 490
+D (16472) esp.emac: receive len= 492
+D (16572) esp.emac: receive len= 492
+D (16682) esp.emac: receive len= 436
+D (16682) esp.emac: receive len= 445
+D (16782) esp.emac: receive len= 508
+D (16892) esp.emac: receive len= 504
+D (16992) esp.emac: receive len= 484
+D (17092) esp.emac: receive len= 516
+D (17202) esp.emac: receive len= 498
+D (17302) esp.emac: receive len= 500
+D (17412) esp.emac: receive len= 500
+D (20212) esp.emac: receive len= 60

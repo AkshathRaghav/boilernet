@@ -8,7 +8,6 @@
 #include "freertos/semphr.h"
 #include "freertos/queue.h"
 #include "freertos/event_groups.h"
-#include "driver/gpio.h"
 
 #include "esp_netif.h"
 #include "esp_eth.h"
@@ -20,41 +19,322 @@
 #include "esp_eth_driver.h"
 #include "esp_check.h"
 #include "esp_mac.h"
+#include <string.h>
+#include <sys/errno.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include "lwip/sockets.h"
+#include "lwip/netdb.h"
+#include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 #include "lwip/sockets.h"
 #include "lwip/dns.h"
 #include "lwip/netdb.h"
 
-
-// Chat -> https://chatgpt.com/c/67b187f9-46a0-8000-8f7e-4e04c453e1f9
-
-#define ETH_PHY_ADDR            -1 // does auto
-// #define ETH_PHY_ADDR            1 // should be hard-coded into the LAN
+#define ETH_PHY_ADDR             1
 #define ETH_PHY_RST_GPIO        -1          // not connected
 #define ETH_MDC_GPIO            23
 #define ETH_MDIO_GPIO           18
-#define ETH_GPIO0               0 
-#define ETH_GPIO2               2
+#define ETH_TAG                 "ETH"
 
 static EventGroupHandle_t s_eth_event_group;
 
 #define ETHERNET_CONNECTED_BIT  BIT0
 #define ETHERNET_FAIL_BIT       BIT1
-#define ETH_TAG                 "ETH"
 
-#define STATIC_IP               0
+#define STATIC_IP               1
 
 #if STATIC_IP
-    #define S_IP        "192.168.1.5"     
-    #define GATEWAY     "192.168.1.1"    
+    #define S_IP        "192.168.0.50"     
+    #define GATEWAY     "192.168.0.1"    
     #define NETMASK     "255.255.255.0"
 #endif /* STATIC_IP */
+
+static netif_input_fn default_input = NULL;
+
+
+#include <stdio.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <errno.h>
+#include "esp_eth.h"
+#include "esp_netif.h"
+#include "esp_event.h"
+#include "esp_log.h"
+#include "nvs_flash.h"
+#include "lwip/inet.h"
+#include "lwip/netdb.h"
+#include "lwip/sockets.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
+// Make sure your Ethernet setup functions are defined somewhere, for example:
+extern void ethernet_setup(void);   // Your Ethernet initialization code
+// And a global event group or similar mechanism used in ethernet_setup, if any.
+
+// Packet type definitions
+#define PACKET_TYPE_START 0x01
+#define PACKET_TYPE_DATA  0x02
+#define PACKET_TYPE_MID   0x03
+#define PACKET_TYPE_END   0x04
+
+#define PORT 8080
+static const char *TAG = "TCP_SOCKET";
+
+// FSM states
+typedef enum {
+    FSM_WAIT_START,
+    FSM_WAIT_DATA,    // After START received, before MID or END
+    FSM_WAIT_MID,     // After MID marker received (optional state; we simply mark that MID is reached)
+    FSM_WAIT_END,
+    FSM_COMPLETE,
+    FSM_ERROR
+} fsm_state_t;
+
+// Helper function: read exactly len bytes from a socket
+static int recv_all(int sock, void *buffer, size_t len) {
+    size_t received = 0;
+    uint8_t *buf = (uint8_t *)buffer;
+    while (received < len) {
+        int r = recv(sock, buf + received, len - received, 0);
+        if (r <= 0) {
+            return -1;
+        }
+        received += r;
+    }
+    return 0;
+}
+
+static void tcp_server_task(void *pvParameters)
+{
+    char addr_str[128];
+    struct sockaddr_storage dest_addr;
+    int keepAlive = 1;
+    int keepIdle = 5;
+    int keepInterval = 5;
+    int keepCount = 3;
+
+    // Setup the server address structure for IPv4
+    struct sockaddr_in *dest_addr_ip4 = (struct sockaddr_in *)&dest_addr;
+    dest_addr_ip4->sin_addr.s_addr = htonl(INADDR_ANY);
+    dest_addr_ip4->sin_family = AF_INET;
+    dest_addr_ip4->sin_port = htons(PORT);
+
+    // Create socket (TCP)
+    int listen_sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (listen_sock < 0) {
+        ESP_LOGE(TAG, "Unable to create socket: errno %d", errno);
+        vTaskDelete(NULL);
+        return;
+    }
+    
+    int opt = 1;
+    setsockopt(listen_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    ESP_LOGI(TAG, "Socket created");
+
+    // Bind the socket to the port
+    if (bind(listen_sock, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) != 0) {
+        ESP_LOGE(TAG, "Socket unable to bind: errno %d", errno);
+        close(listen_sock);
+        vTaskDelete(NULL);
+        return;
+    }
+    ESP_LOGI(TAG, "Socket bound, port %d", PORT);
+
+    // Listen for incoming connections
+    if (listen(listen_sock, 1) != 0) {
+        ESP_LOGE(TAG, "Error during listen: errno %d", errno);
+        close(listen_sock);
+        vTaskDelete(NULL);
+        return;
+    }
+
+    while (1) {
+        ESP_LOGI(TAG, "Socket listening");
+
+        struct sockaddr_storage source_addr;
+        socklen_t addr_len = sizeof(source_addr);
+        ESP_LOGI(TAG, "Waiting for a connection...");
+
+        // Accept incoming connection (blocking call)
+        int sock = accept(listen_sock, (struct sockaddr *)&source_addr, &addr_len);
+        if (sock < 0) {
+            ESP_LOGE(TAG, "Unable to accept connection: errno %d", errno);
+            break;
+        }
+        
+        // Set TCP keepalive options
+        setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &keepAlive, sizeof(int));
+        setsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE, &keepIdle, sizeof(int));
+        setsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL, &keepInterval, sizeof(int));
+        setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT, &keepCount, sizeof(int));
+
+        if (source_addr.ss_family == PF_INET) {
+            inet_ntoa_r(((struct sockaddr_in *)&source_addr)->sin_addr, addr_str, sizeof(addr_str) - 1);
+        }
+        ESP_LOGI(TAG, "Connection accepted from %s", addr_str);
+
+        // Initialize FSM state and checksum accumulator
+        fsm_state_t state = FSM_WAIT_START;
+        unsigned int computed_checksum = 0;
+        unsigned int expected_total_data = 0;
+        unsigned int received_data = 0;
+
+        while (state != FSM_COMPLETE && state != FSM_ERROR) {
+            uint8_t pkt_type;
+            // Read the packet type (1 byte)
+            if (recv_all(sock, &pkt_type, 1) != 0) {
+                ESP_LOGE(TAG, "Failed to read packet type");
+                state = FSM_ERROR;
+                break;
+            }
+            // ESP_LOGI(TAG, "Received packet type: 0x%02X", pkt_type);
+// 
+            switch(pkt_type) {
+                case PACKET_TYPE_START:
+                {
+                    if (state != FSM_WAIT_START) {
+                        ESP_LOGE(TAG, "Unexpected START packet");
+                        state = FSM_ERROR;
+                        break;
+                    }
+                    // START packet: next 8 bytes: width (2), height (2), total data length (4)
+                    uint8_t buffer[8];
+                    if (recv_all(sock, buffer, sizeof(buffer)) != 0) {
+                        ESP_LOGE(TAG, "Failed to read START packet payload");
+                        state = FSM_ERROR;
+                        break;
+                    }
+                    uint16_t width, height;
+                    unsigned int total_len;
+                    width = (buffer[0] << 8) | buffer[1];
+                    height = (buffer[2] << 8) | buffer[3];
+                    total_len = (buffer[4] << 24) | (buffer[5] << 16) | (buffer[6] << 8) | buffer[7];
+                    expected_total_data = total_len;
+                    ESP_LOGI(TAG, "START: Image dimensions: %dx%d, total data: %u bytes", width, height, total_len);
+                    // Send ACK for START (send one byte same as packet type)
+                    if (send(sock, &pkt_type, 1, 0) < 0) {
+                        ESP_LOGE(TAG, "Failed to send START ACK");
+                        state = FSM_ERROR;
+                        break;
+                    }
+                    state = FSM_WAIT_DATA;
+                    break;
+                }
+                case PACKET_TYPE_DATA:
+                {
+                    // DATA packet: next 2 bytes: data length, then payload
+                    uint8_t len_buf[2];
+                    if (recv_all(sock, len_buf, sizeof(len_buf)) != 0) {
+                        ESP_LOGE(TAG, "Failed to read DATA length");
+                        state = FSM_ERROR;
+                        break;
+                    }
+                    uint16_t data_len = (len_buf[0] << 8) | len_buf[1];
+                    if (data_len > 0) {
+                        uint8_t *data_chunk = malloc(data_len);
+                        if (!data_chunk) {
+                            ESP_LOGE(TAG, "Memory allocation failed");
+                            state = FSM_ERROR;
+                            break;
+                        }
+                        if (recv_all(sock, data_chunk, data_len) != 0) {
+                            ESP_LOGE(TAG, "Failed to read DATA payload");
+                            free(data_chunk);
+                            state = FSM_ERROR;
+                            break;
+                        }
+                        // Print received data to the console (as hex values)
+                        // ESP_LOGI(TAG, "DATA packet (%d bytes):", data_len);
+                        for (int i = 0; i < data_len; i++) {
+                            // printf("%02X ", data_chunk[i]);
+                            // Update computed checksum
+                            computed_checksum += data_chunk[i];
+                        }
+                        // printf("\n");
+                        received_data += data_len;
+                        free(data_chunk);
+                    }
+                    // Stay in DATA state. Optionally, you might change state after a threshold.
+                    break;
+                }
+                case PACKET_TYPE_MID:
+                {
+                    // MID packet: next 2 reserved bytes
+                    uint8_t mid_buf[2];
+                    if (recv_all(sock, mid_buf, sizeof(mid_buf)) != 0) {
+                        ESP_LOGE(TAG, "Failed to read MID packet payload");
+                        state = FSM_ERROR;
+                        break;
+                    }
+                    ESP_LOGI(TAG, "MID packet received (halfway marker). Total received so far: %u bytes", received_data);
+                    // Optionally send an ACK for MID if needed
+                    if (send(sock, &pkt_type, 1, 0) < 0) {
+                        ESP_LOGE(TAG, "Failed to send MID ACK");
+                        state = FSM_ERROR;
+                        break;
+                    }
+                    state = FSM_WAIT_DATA; // Continue receiving data
+                    break;
+                }
+                case PACKET_TYPE_END:
+                {
+                    // END packet: next 4 bytes: checksum
+                    uint8_t end_buf[4];
+                    if (recv_all(sock, end_buf, sizeof(end_buf)) != 0) {
+                        ESP_LOGE(TAG, "Failed to read END packet payload");
+                        state = FSM_ERROR;
+                        break;
+                    }
+                    unsigned int received_checksum = (end_buf[0] << 24) | (end_buf[1] << 16) | (end_buf[2] << 8) | end_buf[3];
+                    ESP_LOGI(TAG, "END packet received. Received checksum: 0x%08X, Computed checksum: 0x%08X", received_checksum, computed_checksum);
+                    if (received_checksum != computed_checksum) {
+                        ESP_LOGE(TAG, "Checksum mismatch!");
+                        state = FSM_ERROR;
+                    } else {
+                        vTaskDelay(100 / portTICK_PERIOD_MS);  
+                        // Send ACK for END packet
+                        pkt_type = PACKET_TYPE_END; 
+                        if (send(sock, &pkt_type, 1, 0) < 0)
+                        {
+                            ESP_LOGE(TAG, "Failed to send END ACK");
+                            state = FSM_ERROR;
+                            break;
+                        }
+                        vTaskDelay(100 / portTICK_PERIOD_MS);  
+                        state = FSM_COMPLETE;
+                    }
+                    break;
+                }
+                default:
+                    ESP_LOGE(TAG, "Unknown packet type received: 0x%02X", pkt_type);
+                    state = FSM_ERROR;
+                    break;
+            } // end switch
+        } // end while FSM
+
+        if (state == FSM_COMPLETE) {
+            ESP_LOGI(TAG, "Image transfer complete. Total data received: %u bytes", received_data);
+        } else {
+            ESP_LOGE(TAG, "Image transfer error occurred.");
+        }
+
+        shutdown(sock, 0);
+        close(sock);
+    } // end while listening
+
+    close(listen_sock);
+    vTaskDelete(NULL);
+}
+
 
 /** Event handler for Ethernet events */
 static void eth_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
     uint8_t mac_addr[6] = {0};
-    /* we can get the ethernet driver handle from event data */
     esp_eth_handle_t eth_handle = *(esp_eth_handle_t *)event_data;
 
     switch (event_id) {
@@ -63,6 +343,14 @@ static void eth_event_handler(void *arg, esp_event_base_t event_base, int32_t ev
         ESP_LOGI(ETH_TAG, "Ethernet Link Up");
         ESP_LOGI(ETH_TAG, "Ethernet HW Addr %02x:%02x:%02x:%02x:%02x:%02x",
                  mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+        
+        // esp_netif_t *eth_netif = esp_netif_get_handle_from_ifkey("ETH_DEF");
+        // if (eth_netif) {
+        //     ESP_LOGI(ETH_TAG, "Starting DHCP client...");
+        //     esp_netif_dhcpc_start(eth_netif);
+        // } else {
+        //     ESP_LOGE(ETH_TAG, "Failed to get ETH_DEF interface handle");
+        // }
         break;
     case ETHERNET_EVENT_DISCONNECTED:
         ESP_LOGI(ETH_TAG, "Ethernet Link Down");
@@ -85,58 +373,38 @@ static void got_ip_event_handler(void *arg, esp_event_base_t event_base, int32_t
     ip_event_got_ip_t *event = (ip_event_got_ip_t *) event_data;
     const esp_netif_ip_info_t *ip_info = &event->ip_info;
 
-    ESP_LOGI(ETH_TAG, "Ethernet Got IP Address");
-    ESP_LOGI(ETH_TAG, "~~~~~~~~~~~");
-    ESP_LOGI(ETH_TAG, "ETHIP:" IPSTR, IP2STR(&ip_info->ip));
-    ESP_LOGI(ETH_TAG, "ETHMASK:" IPSTR, IP2STR(&ip_info->netmask));
-    ESP_LOGI(ETH_TAG, "ETHGW:" IPSTR, IP2STR(&ip_info->gw));
-    ESP_LOGI(ETH_TAG, "~~~~~~~~~~~");
+    ESP_LOGE(ETH_TAG, "Ethernet Got IP Address");
+    ESP_LOGE(ETH_TAG, "~~~~~~~~~~~");
+    ESP_LOGE(ETH_TAG, "ETHIP:" IPSTR, IP2STR(&ip_info->ip));
+    ESP_LOGE(ETH_TAG, "ETHMASK:" IPSTR, IP2STR(&ip_info->netmask));
+    ESP_LOGE(ETH_TAG, "ETHGW:" IPSTR, IP2STR(&ip_info->gw));
+    ESP_LOGE(ETH_TAG, "~~~~~~~~~~~");
 
     xEventGroupSetBits(s_eth_event_group, ETHERNET_CONNECTED_BIT);
-
 }
+
 
 static esp_eth_handle_t eth_init_internal(esp_eth_mac_t **mac_out, esp_eth_phy_t **phy_out)
 {
     esp_eth_handle_t ret = NULL;
 
-    // Init common MAC and PHY configs to default
     eth_mac_config_t mac_config = ETH_MAC_DEFAULT_CONFIG();
-    mac_config.sw_reset_timeout_ms = 1000;
     eth_phy_config_t phy_config = ETH_PHY_DEFAULT_CONFIG();
 
-    // Update PHY config based on board specific configuration
-    phy_config.phy_addr         = ETH_PHY_ADDR;
-    phy_config.reset_gpio_num   = ETH_PHY_RST_GPIO;
+    phy_config.phy_addr = ETH_PHY_ADDR;
+    phy_config.reset_gpio_num = ETH_PHY_RST_GPIO;
 
-    // Init vendor specific MAC config to default 
-    // eth_esp32_emac_config_t esp32_emac_config = ETH_ESP32_EMAC_DEFAULT_CONFIG();
     eth_esp32_emac_config_t esp32_emac_config = {
         .smi_mdc_gpio_num  = ETH_MDC_GPIO,                       
         .smi_mdio_gpio_num = ETH_MDIO_GPIO,                      
-        .interface = EMAC_DATA_INTERFACE_RMII,   
-        .clock_config =                               
-        {                                             
-            .rmii =                                   
-            {                                         
-                .clock_mode = EMAC_CLK_EXT_IN,   // Expect clock from external oscillator
-                .clock_gpio = GPIO_NUM_0          // GPIO0 is the REFCLK input
-            }                                         
-        },                                    
+        .interface = EMAC_DATA_INTERFACE_RMII,        
+        .clock_config = { .rmii = { .clock_mode = EMAC_CLK_OUT, .clock_gpio = EMAC_CLK_OUT_180_GPIO } },
         .dma_burst_len = ETH_DMA_BURST_LEN_32 
     };
 
-    // Create new ESP32 Ethernet MAC instance
-    ESP_LOGI(ETH_TAG, "Starting to create new MAC...");
     esp_eth_mac_t *mac = esp_eth_mac_new_esp32(&esp32_emac_config, &mac_config);
-    ESP_LOGI(ETH_TAG, "Finished MAC stuff...");
-
-    // Create new PHY instance based on board configuration -> LAN8720
-    ESP_LOGI(ETH_TAG, "Starting to create new PHY stuff...");
     esp_eth_phy_t *phy = esp_eth_phy_new_lan87xx(&phy_config);
-    ESP_LOGI(ETH_TAG, "Finished PHY stuff...");
 
-    // Init Ethernet driver to default and install it
     esp_eth_handle_t eth_handle = NULL;
     esp_eth_config_t config = ETH_DEFAULT_CONFIG(mac, phy);
 
@@ -149,6 +417,7 @@ static esp_eth_handle_t eth_init_internal(esp_eth_mac_t **mac_out, esp_eth_phy_t
         *phy_out = phy;
     }
     return eth_handle;
+
 err:
     if (eth_handle != NULL) {
         esp_eth_driver_uninstall(eth_handle);
@@ -162,76 +431,55 @@ err:
     return ret;
 }
 
-// void lan8720_power_cycle(void)
-// {
-//     gpio_set_direction(GPIO_NUM_5, GPIO_MODE_INPUT_OUTPUT);
-
-//     // ESP_LOGI(ETH_TAG, "Setting GPIO5 LOW...");
-//     // gpio_set_level(GPIO_NUM_5, 0);
-//     // vTaskDelay(pdMS_TO_TICKS(500));
-//     // ESP_LOGI(ETH_TAG, "GPIO5 state after LOW: %d", gpio_get_level(GPIO_NUM_5));
-
-//     ESP_LOGI(ETH_TAG, "Setting GPIO5 HIGH...");
-//     gpio_set_level(GPIO_NUM_5, 1);
-//     vTaskDelay(pdMS_TO_TICKS(500));
-//     ESP_LOGI(ETH_TAG, "GPIO5 state after HIGH: %d", gpio_get_level(GPIO_NUM_5));
-
-// }
-
 
 void ethernet_setup(void)
 {
     s_eth_event_group = xEventGroupCreate();
 
-    // lan8720_power_cycle();
+    esp_eth_handle_t eth_handle = eth_init_internal(NULL, NULL);
 
-    // ESP_LOGI(ETH_TAG, "Setting GPIO16 LOW...");
-    // gpio_set_level(GPIO_NUM_16, 0);
-    // vTaskDelay(pdMS_TO_TICKS(200));
-    // ESP_LOGI(ETH_TAG, "GPIO16 state after LOW: %d", gpio_get_level(GPIO_NUM_16));
-
-    // ESP_LOGI(ETH_TAG, "Setting GPIO16 HIGH...");
-    // gpio_set_level(GPIO_NUM_16, 1);
-    // vTaskDelay(pdMS_TO_TICKS(200));
-    // ESP_LOGI(ETH_TAG, "GPIO16 state after HIGH: %d", gpio_get_level(GPIO_NUM_16));
-
-    // Initialize Ethernet driver
-    esp_eth_handle_t eth_handle;
-    eth_handle = eth_init_internal(NULL, NULL);
-
-    // Initialize TCP/IP network interface aka the esp-netif (should be called only once in application)
     ESP_ERROR_CHECK(esp_netif_init());
-    // Create default event loop that running in background
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-    // Create instance(s) of esp-netif for Ethernet(s)
     esp_netif_config_t cfg = ESP_NETIF_DEFAULT_ETH();
     esp_netif_t *eth_netif = esp_netif_new(&cfg);
-    
-    #if STATIC_IP
-        if (esp_netif_dhcpc_stop(eth_netif) != ESP_OK) {
-            ESP_LOGE(TAG, "Failed to stop dhcp client");
-            return;
-        }
-        esp_netif_ip_info_t info_t;
-        memset(&info_t, 0, sizeof(esp_netif_ip_info_t));
-        ipaddr_aton((const char *)S_IP, &info_t.ip.addr);
-        ipaddr_aton((const char *)GATEWAY, &info_t.gw.addr);
-        ipaddr_aton((const char *)NETMASK, &info_t.netmask.addr);
-        if(esp_netif_set_ip_info(eth_netif, &info_t) != ESP_OK){
-            ESP_LOGE(TAG, "Failed to set ip info");
-        }
-    #endif /* STATIC_IP */
 
-    // Attach Ethernet driver to TCP/IP stack
+    // Attach the Ethernet netif glue before setting IP info.
     ESP_ERROR_CHECK(esp_netif_attach(eth_netif, esp_eth_new_netif_glue(eth_handle)));
-    
-    // Register user defined event handers
-    ESP_ERROR_CHECK(esp_event_handler_register(ETH_EVENT, ESP_EVENT_ANY_ID, &eth_event_handler, NULL));
-    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_ETH_GOT_IP, &got_ip_event_handler, NULL));
 
-    // Start Ethernet driver state machine
+#if STATIC_IP
+    // Disable the DHCP client now that the glue is attached.
+    if (esp_netif_dhcpc_stop(eth_netif) != ESP_OK) {
+        ESP_LOGE(ETH_TAG, "Failed to stop DHCP client");
+        return;
+    }
+
+    esp_netif_ip_info_t ip_info;
+    memset(&ip_info, 0, sizeof(ip_info));
+
+    // Use IP4_ADDR() macro to set your static IP information.
+    IP4_ADDR(&ip_info.ip, 192, 168, 0, 50);
+    IP4_ADDR(&ip_info.gw, 192, 168, 0, 1);
+    IP4_ADDR(&ip_info.netmask, 255, 255, 255, 0);
+
+    if (esp_netif_set_ip_info(eth_netif, &ip_info) != ESP_OK) {
+        ESP_LOGE(ETH_TAG, "Failed to set IP info");
+    } else { 
+        ESP_LOGI(ETH_TAG, "Succeeded to set static IP info");
+    }
+#endif /* STATIC_IP */
+
+    ESP_LOGI(ETH_TAG, "Registering ESP_EVENT_ANY_ID handlers...");
+    ESP_ERROR_CHECK(esp_event_handler_register(ETH_EVENT, ESP_EVENT_ANY_ID, &eth_event_handler, NULL));
+    ESP_LOGI(ETH_TAG, "Registering IP_EVENT_ETH_GOT_IP handlers...");
+    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_ETH_GOT_IP, &got_ip_event_handler, NULL));
+    ESP_LOGI(ETH_TAG, "Registering ESP_NETIF_IP_EVENT_GOT_IP handlers...");
+    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_NETIF_IP_EVENT_GOT_IP, &got_ip_event_handler, NULL));
+    // ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_NETIF_IP_EVENT_LOST_IP, ip_lost_event_handler, NULL));
+
+    // ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_NETIF_IP_EVENT_LOST_IP, &lost_ip_event_handler, NULL));
     ESP_ERROR_CHECK(esp_eth_start(eth_handle));
+    ESP_LOGI(ETH_TAG, "ESP ETH START Done.");
 
     EventBits_t bits = xEventGroupWaitBits(s_eth_event_group,
                                            ETHERNET_CONNECTED_BIT | ETHERNET_FAIL_BIT,
@@ -239,11 +487,8 @@ void ethernet_setup(void)
                                            pdFALSE,
                                            portMAX_DELAY);
 
-    /* xEventGroupWaitBits() returns the bits before the call returned, 
-     ** hence we can test which event actually happened. 
-     */
     if (bits & ETHERNET_CONNECTED_BIT) {
-        ESP_LOGI(ETH_TAG, "Ethernet Connection established.\n");
+        ESP_LOGI(ETH_TAG, "Ethernet Connection established.");
     } else if (bits & ETHERNET_FAIL_BIT) {
         ESP_LOGE(ETH_TAG, "Ethernet Connection Failed.");
     } else {
@@ -254,10 +499,10 @@ void ethernet_setup(void)
 
 void app_main(void)
 {
-    
     ethernet_setup();
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    ESP_LOGI(ETH_TAG, "Ethernet Initialized!");
+    xTaskCreate(tcp_server_task, "tcp_server", 4096, NULL, 5, NULL);
+    ESP_LOGI(ETH_TAG, "Started TCP server task");
 
-    vTaskDelay(2000/portTICK_PERIOD_MS);
-
-    // do whatever you want
 }
