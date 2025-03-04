@@ -14,9 +14,6 @@
 # EXTERNAL cache entries
 ########################
 
-//No help, variable specified on the command line.
-CCACHE_ENABLE:UNINITIALIZED=0
-
 //Path to a program.
 CMAKE_ADDR2LINE:FILEPATH=/root/.espressif/tools/xtensa-esp-elf/esp-14.2.0_20241119/xtensa-esp-elf/bin/xtensa-esp32-elf-addr2line
 
@@ -313,9 +310,6 @@ ENABLE_PROGRAMS:BOOL=
 //Build Mbed TLS tests.
 ENABLE_TESTING:BOOL=
 
-//No help, variable specified on the command line.
-ESP_PLATFORM:UNINITIALIZED=1
-
 //Generate the auto-generated files as needed
 GEN_FILES:BOOL=
 
@@ -354,12 +348,6 @@ Mbed TLS_IS_TOP_LEVEL:STATIC=OFF
 
 //Value Computed by CMake
 Mbed TLS_SOURCE_DIR:STATIC=/root/esp/v5.4/esp-idf/components/mbedtls/mbedtls
-
-//No help, variable specified on the command line.
-PYTHON:UNINITIALIZED=/root/.espressif/python_env/idf5.4_py3.9_env/bin/python
-
-//No help, variable specified on the command line.
-PYTHON_DEPS_CHECKED:UNINITIALIZED=1
 
 //Allow unsafe builds. These builds ARE NOT SECURE.
 UNSAFE_BUILD:BOOL=OFF

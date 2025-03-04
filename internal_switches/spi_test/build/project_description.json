@@ -1,7 +1,7 @@
 {
     "version":            "1.1",
     "project_name":       "spi_test",
-    "project_version":    "3ac2428-dirty",
+    "project_version":    "8262045-dirty",
     "project_path":       "/home/araviki/workbench/boilernet/internal_switches/spi_test",
     "idf_path":           "/root/esp/v5.4/esp-idf",
     "build_dir":          "/home/araviki/workbench/boilernet/internal_switches/spi_test/build",
