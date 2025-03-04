@@ -15,12 +15,12 @@
 #define GPIO_SCLK           18
 
 // Chip Select pins for two slaves.
-#define GPIO_CS1            17
+#define GPIO_CS1            21
 #define GPIO_CS2            5
 
 // Push buttons to select the slave (active low).
-#define GPIO_BUTTON1        33
-#define GPIO_BUTTON2        26
+#define GPIO_BUTTON1        32
+#define GPIO_BUTTON2        33
 
 #define MASTER_MSG          "BUTTON_PRESSED"
 #define SLAVE_ACK_STR       "ACK_BUTTON_PRESSED"
@@ -56,7 +56,7 @@ void app_main(void)
         .command_bits = 0,
         .address_bits = 0,
         .dummy_bits = 0,
-        .clock_speed_hz = 5000000,
+        .clock_speed_hz = 15000000,
         .duty_cycle_pos = 128,  // 50% duty cycle
         .mode = 0,
         .spics_io_num = GPIO_CS1,
@@ -69,7 +69,7 @@ void app_main(void)
         .command_bits = 0,
         .address_bits = 0,
         .dummy_bits = 0,
-        .clock_speed_hz = 5000000,
+        .clock_speed_hz = 15000000,
         .duty_cycle_pos = 128,
         .mode = 0,
         .spics_io_num = GPIO_CS2,

@@ -22,13 +22,13 @@
 #define GPIO_CS     5
 //#define GPIO_CS     17
 // Use a dedicated LED for Slave 1.
-#define GPIO_LED    32
+#define GPIO_LED    11
 
 #define MASTER_MSG  "BUTTON_PRESSED"
 #define SLAVE_ACK   "ACK_BUTTON_PRESSED"
 
-static const char *TAG = "Slave1";
-//static const char *TAG = "Slave2";
+//static const char *TAG = "Slave1";
+static const char *TAG = "Slave2";
 
 void app_main(void)
 {
@@ -63,8 +63,8 @@ void app_main(void)
         .intr_type = GPIO_INTR_DISABLE,
         .mode = GPIO_MODE_OUTPUT,
         .pin_bit_mask = BIT64(GPIO_LED),
-        .pull_down_en = 0,
-        .pull_up_en = 0,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
     };
     gpio_config(&led_conf);
 
