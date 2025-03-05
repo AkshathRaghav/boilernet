@@ -1,0 +1,138 @@
+[0;33m--- esp-idf-monitor 1.5.0 on /dev/ttyUSB0 115200[0m
+[0;33m--- Quit: Ctrl+] | Menu: Ctrl+T | Help: Ctrl+T followed by Ctrl+H[0m
+[0;33m--- 0x40080400: _init at ??:?
+[0m
+[0;33m--- 0x40081558: uart_ll_is_enabled at /root/esp/v5.4/esp-idf/components/hal/esp32/include/hal/uart_ll.h:73
+ (inlined by) rtc_brownout_isr_handler at /root/esp/v5.4/esp-idf/components/esp_system/port/brownout.c:65
+[0m
+[0;33m--- 0x400d2ea8: esp_log_get_default_level at /root/esp/v5.4/esp-idf/components/log/include/esp_log_level.h:76
+ (inlined by) soc_get_available_memory_regions at /root/esp/v5.4/esp-idf/components/heap/port/memory_layout_utils.c:133
+[0m
+[0;33m--- 0x400d34d0: get_available_int at /root/esp/v5.4/esp-idf/components/esp_hw_support/intr_alloc.c:387
+[0m
+[0;33m--- 0x400d2de8: s_prepare_reserved_regions at /root/esp/v5.4/esp-idf/components/heap/port/memory_layout_utils.c:104 (discriminator 1)
+[0m
+[0;33m--- Warning: Checksum mismatch between flashed and built applications. Checksum of built application is 0744cde4d9e307aed117bac9016dd9048a401a93d1709e5edfce16d157a2580b[0m
+[0;33m--- 0x400d2ebc: soc_get_available_memory_regions at /root/esp/v5.4/esp-idf/components/heap/port/memory_layout_utils.c:133 (discriminator 1)
+[0m
+[0;33m--- 0x400d4c58: uart_ll_read_rxfifo at /root/esp/v5.4/esp-idf/components/hal/esp32/include/hal/uart_ll.h:321 (discriminator 2)
+ (inlined by) uart_rx_char at /root/esp/v5.4/esp-idf/components/esp_driver_uart/src/uart_vfs.c:190 (discriminator 2)
+[0m
+[0;33m--- 0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+[0m
+[0;33m--- 0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+[0m
+[0;33m--- 0x40000000: _WindowOverflow4 in ROM
+[0m
+[0;33m--- 0x40000000: _WindowOverflow4 in ROM
+[0m
+[0;33m--- 0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+[0m
+[0;33m--- 0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+[0m
+[0;33m--- 0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+0x40082000: heap_caps_malloc_default at /root/esp/v5.4/esp-idf/components/heap/heap_caps.c:122
+[0m
+[0;33m--- 0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+0x40082000: heap_caps_malloc_default at /root/esp/v5.4/esp-idf/components/heap/heap_caps.c:122
+0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+[0m
+[0;33m--- 0x40082000: heap_caps_malloc_default at /root/esp/v5.4/esp-idf/components/heap/heap_caps.c:122
+0x40084000: detect_spi_flash_chip at /root/esp/v5.4/esp-idf/components/spi_flash/esp_flash_api.c:516
+[0m
+[0;33m--- 0x40082000: heap_caps_malloc_default at /root/esp/v5.4/esp-idf/components/heap/heap_caps.c:122
+0x40084000: detect_spi_flash_chip at /root/esp/v5.4/esp-idf/components/spi_flash/esp_flash_api.c:516
+0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+[0m
+[0;33m--- 0x40084000: detect_spi_flash_chip at /root/esp/v5.4/esp-idf/components/spi_flash/esp_flash_api.c:516
+0x40086000: spinlock_initialize at /root/esp/v5.4/esp-idf/components/esp_hw_support/include/spinlock.h:55
+ (inlined by) xQueueGenericReset at /root/esp/v5.4/esp-idf/components/freertos/FreeRTOS-Kernel/queue.c:337
+[0m
+[0;33m--- 0x40084000: detect_spi_flash_chip at /root/esp/v5.4/esp-idf/components/spi_flash/esp_flash_api.c:516
+0x40086000: spinlock_initialize at /root/esp/v5.4/esp-idf/components/esp_hw_support/include/spinlock.h:55
+ (inlined by) xQueueGenericReset at /root/esp/v5.4/esp-idf/components/freertos/FreeRTOS-Kernel/queue.c:337
+0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+[0m
+[0;33m--- 0x40086000: spinlock_initialize at /root/esp/v5.4/esp-idf/components/esp_hw_support/include/spinlock.h:55
+ (inlined by) xQueueGenericReset at /root/esp/v5.4/esp-idf/components/freertos/FreeRTOS-Kernel/queue.c:337
+0x40088000: uxTaskPriorityGet at /root/esp/v5.4/esp-idf/components/freertos/FreeRTOS-Kernel/tasks.c:1709
+[0m
+[0;33m--- 0x40086000: spinlock_initialize at /root/esp/v5.4/esp-idf/components/esp_hw_support/include/spinlock.h:55
+ (inlined by) xQueueGenericReset at /root/esp/v5.4/esp-idf/components/freertos/FreeRTOS-Kernel/queue.c:337
+0x40088000: uxTaskPriorityGet at /root/esp/v5.4/esp-idf/components/freertos/FreeRTOS-Kernel/tasks.c:1709
+0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+[0m
+[0;33m--- 0x40088000: uxTaskPriorityGet at /root/esp/v5.4/esp-idf/components/freertos/FreeRTOS-Kernel/tasks.c:1709
+0x4008a000: spi_flash_ll_set_cs_setup at /root/esp/v5.4/esp-idf/components/hal/esp32/include/hal/spi_flash_ll.h:411
+ (inlined by) spi_flash_hal_device_config at /root/esp/v5.4/esp-idf/components/hal/spi_flash_hal_common.inc:55
+[0m
+[0;33m--- 0x40088000: uxTaskPriorityGet at /root/esp/v5.4/esp-idf/components/freertos/FreeRTOS-Kernel/tasks.c:1709
+0x4008a000: spi_flash_ll_set_cs_setup at /root/esp/v5.4/esp-idf/components/hal/esp32/include/hal/spi_flash_ll.h:411
+ (inlined by) spi_flash_hal_device_config at /root/esp/v5.4/esp-idf/components/hal/spi_flash_hal_common.inc:55
+0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+[0m
+[0;33m--- 0x4008a000: spi_flash_ll_set_cs_setup at /root/esp/v5.4/esp-idf/components/hal/esp32/include/hal/spi_flash_ll.h:411
+ (inlined by) spi_flash_hal_device_config at /root/esp/v5.4/esp-idf/components/hal/spi_flash_hal_common.inc:55
+0x4008c000: abort at /root/esp/v5.4/esp-idf/components/newlib/abort.c:38
+[0m
+[0;33m--- 0x4008a000: spi_flash_ll_set_cs_setup at /root/esp/v5.4/esp-idf/components/hal/esp32/include/hal/spi_flash_ll.h:411
+ (inlined by) spi_flash_hal_device_config at /root/esp/v5.4/esp-idf/components/hal/spi_flash_hal_common.inc:55
+0x4008c000: abort at /root/esp/v5.4/esp-idf/components/newlib/abort.c:38
+0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+[0m
+[0;33m--- 0x4008c000: abort at /root/esp/v5.4/esp-idf/components/newlib/abort.c:38
+[0m
+[0;33m--- 0x4008c000: abort at /root/esp/v5.4/esp-idf/components/newlib/abort.c:38
+0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+[0m
+[0;33m--- 0x40080000: _WindowOverflow4 at /root/esp/v5.4/esp-idf/components/xtensa/xtensa_vectors.S:2027
+[0m
+[0;33m--- 0x400d2b38: heap_caps_init at /root/esp/v5.4/esp-idf/components/heap/heap_caps_init.c:101
+[0m
+[0;33m--- 0x400d5d9c: free_proxy_members at /root/esp/v5.4/esp-idf/components/vfs/vfs.c:139
+[0m
+[0;33m--- 0x400d3514: get_available_int at /root/esp/v5.4/esp-idf/components/esp_hw_support/intr_alloc.c:422
+[0m
+[0;33m--- 0x400d3520: get_available_int at /root/esp/v5.4/esp-idf/components/esp_hw_support/intr_alloc.c:320
+[0m
+[0;33m--- 0x400d74a4: gpio_ll_set_intr_type at /root/esp/v5.4/esp-idf/components/hal/esp32/include/hal/gpio_ll.h:259
+ (inlined by) gpio_set_intr_type at /root/esp/v5.4/esp-idf/components/esp_driver_gpio/src/gpio.c:158
+[0m
+[0;33m--- 0x400d90ec: add_entry at /root/esp/v5.4/esp-idf/components/esp_system/task_wdt/task_wdt.c:195
+[0m
+[0;33m--- 0x400d7e40: gpio_ll_iomux_in at /root/esp/v5.4/esp-idf/components/hal/esp32/include/hal/gpio_ll.h:680
+ (inlined by) gpio_iomux_in at /root/esp/v5.4/esp-idf/components/esp_driver_gpio/src/gpio.c:798
+[0m
+[0;33m--- 0x400d5e08: esp_vfs_duplicate_fs_ops at /root/esp/v5.4/esp-idf/components/vfs/vfs.c:274
+[0m
+[0;33m--- 0x400d352c: get_available_int at /root/esp/v5.4/esp-idf/components/esp_hw_support/intr_alloc.c:364 (discriminator 1)
+[0m
+[0;33m--- 0x400d2f48: soc_get_available_memory_regions at /root/esp/v5.4/esp-idf/components/heap/port/memory_layout_utils.c:154
+[0m
+[0;33m--- 0x400e2914: _dtoa_r at /builds/idf/crosstool-NG/.build/xtensa-esp-elf/src/newlib/newlib/libc/stdlib/dtoa.c:714
+[0m
+[0;33m--- 0x40086c7c: _frxt_int_enter at /root/esp/v5.4/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/portasm.S:147
+[0m
+[0;33m--- 0x400d4454: unregister_select at /root/esp/v5.4/esp-idf/components/esp_driver_uart/src/uart_vfs.c:407
+[0m
+[0;33m--- 0x400d3af4: rtc_isr_register at /root/esp/v5.4/esp-idf/components/esp_hw_support/rtc_module.c:120
+[0m
+[0;33m--- 0x400dfd14: get_arg at /builds/idf/crosstool-NG/.build/xtensa-esp-elf/src/newlib/newlib/libc/stdio/vfprintf.c:2272
+[0m
+[0;33m--- 0x400d3550: esp_ptr_in_rom at /root/esp/v5.4/esp-idf/components/esp_hw_support/include/esp_memory_utils.h:338
+ (inlined by) esp_intr_ptr_in_isr_region at /root/esp/v5.4/esp-idf/components/esp_hw_support/intr_alloc.c:478
+[0m
+[0;33m--- 0x400db07c: spi_slave_queue_trans at /root/esp/v5.4/esp-idf/components/esp_driver_spi/src/gpspi/spi_slave.c:373 (discriminator 17)
+[0m
+[0;33m--- 0x400d91a8: task_wdt_timeout_abort at /root/esp/v5.4/esp-idf/components/esp_system/task_wdt/task_wdt.c:375 (discriminator 1)
+[0m
+[0;33m--- 0x400dafec: spi_slave_initialize at /root/esp/v5.4/esp-idf/components/esp_driver_spi/src/gpspi/spi_slave.c:267
+[0m
+[0;33m--- 0x400d91a8: task_wdt_timeout_abort at /root/esp/v5.4/esp-idf/components/esp_system/task_wdt/task_wdt.c:375 (discriminator 1)
+[0m
+[0;33m--- 0x400daf7c: spi_slave_initialize at /root/esp/v5.4/esp-idf/components/esp_driver_spi/src/gpspi/spi_slave.c:243
+[0m
+[0;33m--- 0x400d90f8: add_entry at /root/esp/v5.4/esp-idf/components/esp_system/task_wdt/task_wdt.c:195 (discriminator 1)
+[0m
+[0m

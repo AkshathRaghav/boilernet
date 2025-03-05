@@ -1,7 +1,7 @@
 {
     "version":            "1.1",
     "project_name":       "spi_test",
-    "project_version":    "8262045-dirty",
+    "project_version":    "25fcd45-dirty",
     "project_path":       "/home/araviki/workbench/boilernet/internal_switches/spi_test",
     "idf_path":           "/root/esp/v5.4/esp-idf",
     "build_dir":          "/home/araviki/workbench/boilernet/internal_switches/spi_test/build",
@@ -835,7 +835,7 @@
             "managed_reqs": [],
             "managed_priv_reqs": [ "sd_card" ],
             "file": "/home/araviki/workbench/boilernet/internal_switches/spi_test/build/esp-idf/main/libmain.a",
-            "sources": [ "/home/araviki/workbench/boilernet/internal_switches/spi_test/main/read_eth.c" ],
+            "sources": [ "/home/araviki/workbench/boilernet/internal_switches/spi_test/main/network_node.c" ],
             "include_dirs": [ "." ]
         },
         "mbedtls": {

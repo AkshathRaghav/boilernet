@@ -11,10 +11,10 @@ from PIL import Image
 # Protocol definitions:
 # --------------------------
 # Packet Types
-PACKET_TYPE_START = 0x01
-PACKET_TYPE_DATA  = 0x02
-PACKET_TYPE_MID   = 0x03
-PACKET_TYPE_END   = 0x04
+PACKET_TYPE_START = 0xA0
+PACKET_TYPE_DATA  = 0xA1
+PACKET_TYPE_MID   = 0xA2
+PACKET_TYPE_END   = 0xA3
 
 # Packet sizes and offsets
 DATA_PACKET_SIZE = 1024  # Fixed data packet size (payload only)

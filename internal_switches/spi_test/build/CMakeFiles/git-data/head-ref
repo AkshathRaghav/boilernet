@@ -1,11 +1,1 @@
-0000000000000000000000000000000000000000 24b959a17f11ee0bf527a3cd7d32da2cc581b70f root <root@araviki> 1737862490 -0500	branch: Created from HEAD
-24b959a17f11ee0bf527a3cd7d32da2cc581b70f f414fc38919357e87c64c9ff6eba69707d853b4d root <root@araviki> 1737951409 -0500	commit: Confirmed working
-f414fc38919357e87c64c9ff6eba69707d853b4d baf9fec980749fa83cd48850ace34599a2b7caad AkshathRaghav <akshathraghav.r@gmail.com> 1738729997 -0500	commit: test
-baf9fec980749fa83cd48850ace34599a2b7caad 54ea47232e662e4db7245ea49a3882c6f4e05368 AkshathRaghav <akshathraghav.r@gmail.com> 1738779952 -0500	commit: Two way usb-uart
-54ea47232e662e4db7245ea49a3882c6f4e05368 5bf2b6ac75deaa842bc4a6a7716ce01333b27947 AkshathRaghav <akshathraghav.r@gmail.com> 1738818243 -0500	commit: Working
-5bf2b6ac75deaa842bc4a6a7716ce01333b27947 399d5ae69bb073911e91c2255bc0a21de739349c AkshathRaghav <akshathraghav.r@gmail.com> 1738818282 -0500	commit: gitignore
-399d5ae69bb073911e91c2255bc0a21de739349c 2f7eebcb6903a051d574ccfd9c795e730b0bd32a AkshathRaghav <akshathraghav.r@gmail.com> 1738821569 -0500	commit: working back and forth
-2f7eebcb6903a051d574ccfd9c795e730b0bd32a 2a076e232a7c9ae60b508fe831642db3fa9e449a AkshathRaghav <akshathraghav.r@gmail.com> 1738905199 -0500	commit: Working back and forth
-2a076e232a7c9ae60b508fe831642db3fa9e449a 76faa6f611c0f80ab32a256c7cf49c9bc26626bd AkshathRaghav <akshathraghav.r@gmail.com> 1739688417 -0500	commit: maybe fix
-76faa6f611c0f80ab32a256c7cf49c9bc26626bd 3ac2428d9a1715ba31467bf4aab77fe67e501d5f AkshathRaghav <akshathraghav.r@gmail.com> 1739854515 -0500	commit: commented out the SW stuff. Line 114 tries to EXPECT CLOCK FROM LAN, which is Sautter's workaround - WROVER
-3ac2428d9a1715ba31467bf4aab77fe67e501d5f 826204596b4d4677ef6da7acc5e5213dccba35fd AkshathRaghav <akshathraghav.r@gmail.com> 1741002328 -0500	commit: working
+25fcd458d0597e2ce91c023f67fab18acfeaacc3

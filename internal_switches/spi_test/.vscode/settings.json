@@ -11,6 +11,8 @@
         "IDF_TARGET": "esp32"
     },
     "files.associations": {
-        "string.h": "c"
+        "string.h": "c",
+        "freertos.h": "c",
+        "stddef.h": "c"
     }
 }

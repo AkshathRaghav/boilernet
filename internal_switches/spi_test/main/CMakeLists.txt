@@ -1,4 +1,5 @@
-set(srcs "read_eth.c")
+set(srcs "network_node.c")
+# set(srcs "internal_switch.c")
 
 idf_component_register(SRCS ${srcs}
                        INCLUDE_DIRS "." 

@@ -1,190 +1,225 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "driver/spi_slave.h"
-#include "driver/gpio.h"
-#include "esp_log.h"
-#include "esp_err.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "sdkconfig.h"
+#include "driver/spi_slave.h"
+#include "driver/gpio.h"
+#include "esp_system.h"
+#include "esp_log.h"
+#include "esp_err.h"
 
-// SPI Pin definitions
+// ######################################################################
+// Pin definitions and constants – DO NOT CHANGE
 #define PIN_NUM_MOSI  13
 #define PIN_NUM_MISO  12
 #define PIN_NUM_CLK   14
 #define PIN_NUM_CS    15
+#define GPIO_LED      2
 
-// LED Pin definitions (adjust these pins as needed)
-#define LED_START     GPIO_NUM_18
-#define LED_DAT       GPIO_NUM_19
-#define LED_FIN       GPIO_NUM_21
-#define LED_FUC       GPIO_NUM_22
+#define MSG_BUF_SIZE  1024
 
-// Packet type definitions
-#define PACKET_ACK    0x01  // ACK response
-#define PACKET_DAT    0x02  // Data packet
-#define PACKET_FIN    0x03  // End of stream
-#define PACKET_FUC    0x04  // Error condition
+#define PACKET_START_WRITE 0xA5  // SPI command to indicate start writing
+#define PACKET_DAT         0xA6  // SPI data packet (same as before)
+#define PACKET_MID         0xA7  // SPI middle packet
+#define PACKET_END         0xA8  // SPI finish packet
+#define PACKET_FUC         0xF9  // SPI error condition
 
-// Maximum packet size (1 header byte + up to 1024 bytes payload)
-#define MAX_PACKET_SIZE  (1024 + 1)
+#define SPI_HOST_TYPE HSPI_HOST
+// ######################################################################
 
-// Global SPI slave buffers (must be DMA-capable)
-static uint8_t slave_tx_buffer[MAX_PACKET_SIZE];
-static uint8_t slave_rx_buffer[MAX_PACKET_SIZE];
+static const char *TAG = "SLAVE";
 
-// Global variable to hold the header for the next transaction
-// When a DAT packet is received, we prepare an ACK (PACKET_ACK) for the next transaction.
-static uint8_t next_tx_header = 0xFF;  // Default: no valid header
+// Slave FSM states.
+typedef enum {
+    SLAVE_FSM_IDLE,
+    SLAVE_FSM_WAIT_START_CONFIRM,
+    SLAVE_FSM_WAIT_MID_CONFIRM,
+    SLAVE_FSM_WAIT_END_CONFIRM,
+    SLAVE_FSM_DATA_RECEIVE
+} slave_fsm_state_t;
+static volatile slave_fsm_state_t slave_state = SLAVE_FSM_IDLE;
 
-static const char *TAG = "SPI_SLAVE";
+static uint8_t tx_buffer[MSG_BUF_SIZE];
+static uint8_t rx_buffer[MSG_BUF_SIZE];
 
-/********************************************************************
- * LED Initialization
- ********************************************************************/
-static void led_init(void)
+static void prepare_tx_buffer(uint8_t header)
 {
-    gpio_config_t io_conf = {
-        .intr_type = GPIO_INTR_DISABLE,
-        .mode = GPIO_MODE_OUTPUT,
-        // Bit mask for all LED pins
-        .pin_bit_mask = ((uint64_t)1 << LED_START) |
-                        ((uint64_t)1 << LED_DAT)   |
-                        ((uint64_t)1 << LED_FIN)   |
-                        ((uint64_t)1 << LED_FUC),
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .pull_up_en = GPIO_PULLUP_DISABLE,
-    };
-    gpio_config(&io_conf);
-
-    // Initialize all LEDs to off (low)
-    gpio_set_level(LED_START, 0);
-    gpio_set_level(LED_DAT, 0);
-    gpio_set_level(LED_FIN, 0);
-    gpio_set_level(LED_FUC, 0);
+    memset(tx_buffer, 0, MSG_BUF_SIZE);
+    tx_buffer[0] = header;
 }
 
-/********************************************************************
- * SPI Slave Callbacks
- ********************************************************************/
-
-// Called just before a transaction starts.
-// Here we load the TX buffer with the header (e.g. ACK) that should be sent in the next transaction.
-void spi_slave_post_setup_callback(spi_slave_transaction_t *trans)
+void app_main(void)
 {
-    slave_tx_buffer[0] = next_tx_header;
-    ESP_LOGI(TAG, "Post-Setup: Prepared TX header 0x%02X", next_tx_header);
-}
+    esp_err_t ret;
 
-// Called after a transaction completes.
-void spi_slave_post_trans_callback(spi_slave_transaction_t *trans)
-{
-    // Check how many bits were transferred.
-    // If only 8 bits were transferred, assume this was the master reading our prepared ACK.
-    if (trans->trans_len == 8) {
-         ESP_LOGI(TAG, "Response transaction completed; sent ACK: 0x%02X", slave_tx_buffer[0]);
-         return;  // Nothing further to process.
-    }
-    
-    // Otherwise, process the received packet.
-    uint8_t header = slave_rx_buffer[0];
-    ESP_LOGI(TAG, "Data transaction received; header: 0x%02X", header);
-    
-    switch (header) {
-        case PACKET_ACK:
-            ESP_LOGI(TAG, "START packet detected (interpreted as ACK from master)");
-            gpio_set_level(LED_START, 1);
-            next_tx_header = 0xFF;  // No response needed
-            break;
-        case PACKET_DAT:
-            ESP_LOGI(TAG, "DATA packet (DAT) received");
-            gpio_set_level(LED_DAT, 1);
-            // Prepare ACK for next transaction so the master gets confirmation.
-            next_tx_header = PACKET_ACK;
-            break;
-        case PACKET_FIN:
-            ESP_LOGI(TAG, "FIN packet received");
-            gpio_set_level(LED_FIN, 1);
-            next_tx_header = 0xFF;
-            break;
-        case PACKET_FUC:
-            ESP_LOGI(TAG, "FUC (error) packet received");
-            gpio_set_level(LED_FUC, 1);
-            next_tx_header = 0xFF;
-            break;
-        default:
-            ESP_LOGW(TAG, "Unknown packet type: 0x%02X", header);
-            next_tx_header = 0xFF;
-            break;
-    }
-    // (Optionally, you may wish to clear or reset LED states after some time.)
-}
-
-/********************************************************************
- * SPI Slave Receive Task
- ********************************************************************/
-void spi_slave_receive_task(void *arg)
-{
-    while (1) {
-        // We use the maximum packet size as the buffer length.
-        spi_slave_transaction_t trans = {0};
-        trans.length = MAX_PACKET_SIZE * 8;  // in bits; actual transaction length is determined by the master.
-        trans.tx_buffer = slave_tx_buffer;
-        trans.rx_buffer = slave_rx_buffer;
-        
-        // Wait (block) until the master initiates a transaction.
-        esp_err_t ret = spi_slave_transmit(VSPI_HOST, &trans, portMAX_DELAY);
-        if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "SPI slave transmit error: %s", esp_err_to_name(ret));
-        }
-        // The callbacks automatically process the transaction.
-    }
-}
-
-
-esp_err_t spi_slave_init(void) {
-    ESP_LOGI(TAG, "Initializing SPI Slave Node...");
-    
-    // Initialize LED GPIOs
-    
-    // Configure SPI bus for slave mode
+    // Configure SPI bus for the slave.
     spi_bus_config_t buscfg = {
         .mosi_io_num = PIN_NUM_MOSI,
         .miso_io_num = PIN_NUM_MISO,
         .sclk_io_num = PIN_NUM_CLK,
         .quadwp_io_num = -1,
         .quadhd_io_num = -1,
-        .max_transfer_sz = MAX_PACKET_SIZE,
+        .max_transfer_sz = MSG_BUF_SIZE  // Ensure the buffer is large enough
     };
-    
-    // Configure SPI slave interface with callbacks
+
+    // Configure SPI slave interface.
     spi_slave_interface_config_t slvcfg = {
         .mode = 0,
         .spics_io_num = PIN_NUM_CS,
         .queue_size = 3,
         .flags = 0,
-        .post_setup_cb = spi_slave_post_setup_callback,
-        .post_trans_cb = spi_slave_post_trans_callback,
+        .post_setup_cb = NULL,
+        .post_trans_cb = NULL, 
     };
-    
-    // Initialize SPI slave on VSPI_HOST using DMA channel 1
-    esp_err_t ret = spi_slave_initialize(VSPI_HOST, &buscfg, &slvcfg, 1);
+
+    // Enable pull-ups on the SPI bus lines.
+    gpio_set_pull_mode(PIN_NUM_MOSI, GPIO_PULLUP_ONLY);
+    gpio_set_pull_mode(PIN_NUM_CLK, GPIO_PULLUP_ONLY);
+    gpio_set_pull_mode(PIN_NUM_CS,   GPIO_PULLUP_ONLY);
+
+    // Configure the LED GPIO as an output.
+    gpio_config_t led_conf = {
+        .intr_type = GPIO_INTR_DISABLE,
+        .mode = GPIO_MODE_OUTPUT,
+        .pin_bit_mask = BIT64(GPIO_LED),
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+    };
+    gpio_config(&led_conf);
+
+    // Initialize the SPI slave.
+    ret = spi_slave_initialize(SPI_HOST_TYPE, &buscfg, &slvcfg, SPI_DMA_CH_AUTO);
     if (ret != ESP_OK) {
-         ESP_LOGE(TAG, "Failed to initialize SPI slave: %s", esp_err_to_name(ret));
-         return;
+        ESP_LOGE(TAG, "Failed to initialize SPI slave: %s", esp_err_to_name(ret));
+        return;
     }
-    ESP_LOGI(TAG, "SPI Slave Initialized");
-}
+    ESP_LOGI(TAG, "SPI slave initialized.");
 
-/********************************************************************
- * Application Main Entry Point
- ********************************************************************/
-void app_main(void)
-{
-    led_init();
-    spi_slave_init();
+    uint8_t next_tx_header = PACKET_START_WRITE;
+    // uint8_t *tx_buffer = heap_caps_malloc(MSG_BUF_SIZE, MALLOC_CAP_DMA);
+    // uint8_t *rx_buffer = heap_caps_malloc(MSG_BUF_SIZE, MALLOC_CAP_DMA);
+    // if (!tx_buffer || !rx_buffer) {
+    //     ESP_LOGE(TAG, "Failed to allocate DMA buffers");
+    //     if (tx_buffer) free(tx_buffer);
+    //     if (rx_buffer) free(rx_buffer);
+    //     vTaskDelay(pdMS_TO_TICKS(100));
+    // }
 
-    // Create the SPI slave receive task
-    xTaskCreate(spi_slave_receive_task, "spi_slave_receive_task", 4096, NULL, 5, NULL);
+    // spi_slave_transaction_t trans;
+    // memset(&trans, 0, sizeof(trans));
+
+    while (1) {
+        prepare_tx_buffer(next_tx_header);
+        memset(rx_buffer, 0, MSG_BUF_SIZE);
+
+        spi_slave_transaction_t trans;
+        memset(&trans, 0, sizeof(trans));
+        trans.length    = MSG_BUF_SIZE * 8; // in bits
+        trans.tx_buffer = &tx_buffer;
+        trans.rx_buffer = &rx_buffer;
+
+        ret = spi_slave_queue_trans(SPI_HOST_TYPE, &trans, portMAX_DELAY);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to queue SPI transaction: %s", esp_err_to_name(ret));
+            vTaskDelay(pdMS_TO_TICKS(100));
+            continue;
+        }
+        spi_slave_transaction_t *completed_trans = NULL;
+        ret = spi_slave_get_trans_result(SPI_HOST_TYPE, &completed_trans, portMAX_DELAY);
+        if (ret != ESP_OK || completed_trans != &trans) {
+            ESP_LOGE(TAG, "Failed to get SPI transaction result: %s", esp_err_to_name(ret));
+            vTaskDelay(pdMS_TO_TICKS(100));
+            continue;
+        }
+
+        uint8_t received_cmd = rx_buffer[0];
+        ESP_LOGI(TAG, "Transaction complete. Received command: 0x%02X", received_cmd);
+
+        switch (slave_state) {
+            case SLAVE_FSM_IDLE:
+                if (received_cmd == PACKET_START_WRITE) {
+                    ESP_LOGI(TAG, "SLAVE: Received START command. Waiting for confirmation...");
+                    slave_state      = SLAVE_FSM_WAIT_START_CONFIRM;
+                    next_tx_header   = PACKET_START_WRITE;  // Echo next time
+                }
+                else if (received_cmd == PACKET_DAT) {
+                    ESP_LOGI(TAG, "SLAVE: Received DATA packet.");
+                    slave_state      = SLAVE_FSM_DATA_RECEIVE;
+                    next_tx_header   = 0x00; // No special confirmation needed
+                }
+                else if (received_cmd == PACKET_MID) {
+                    ESP_LOGI(TAG, "SLAVE: Received MID command. Waiting for confirmation...");
+                    slave_state      = SLAVE_FSM_WAIT_MID_CONFIRM;
+                    next_tx_header   = PACKET_MID;
+                }
+                else if (received_cmd == PACKET_END) {
+                    ESP_LOGI(TAG, "SLAVE: Received END command. Waiting for confirmation...");
+                    slave_state      = SLAVE_FSM_WAIT_END_CONFIRM;
+                    next_tx_header   = PACKET_END;
+                }
+                else {
+                    ESP_LOGW(TAG, "SLAVE: Unknown command 0x%02X in IDLE state.", received_cmd);
+                    next_tx_header   = 0x00;
+                }
+                break;
+
+            case SLAVE_FSM_WAIT_START_CONFIRM:
+                if (received_cmd == PACKET_START_WRITE) {
+                    ESP_LOGI(TAG, "SLAVE: START command confirmed. Switching to data receive.");
+                    slave_state      = SLAVE_FSM_DATA_RECEIVE;
+                    next_tx_header   = 0x00;
+                } else {
+                    ESP_LOGW(TAG, "SLAVE: Unexpected cmd 0x%02X while WAIT_START_CONFIRM.", received_cmd);
+                    next_tx_header   = 0x00;
+                }
+                break;
+
+            case SLAVE_FSM_WAIT_MID_CONFIRM:
+                if (received_cmd == PACKET_MID) {
+                    ESP_LOGI(TAG, "SLAVE: MID command confirmed. Switching to data receive.");
+                    slave_state      = SLAVE_FSM_DATA_RECEIVE;
+                    next_tx_header   = 0x00;
+                } else {
+                    ESP_LOGW(TAG, "SLAVE: Unexpected cmd 0x%02X while WAIT_MID_CONFIRM.", received_cmd);
+                    next_tx_header   = 0x00;
+                }
+                break;
+
+            case SLAVE_FSM_WAIT_END_CONFIRM:
+                if (received_cmd == PACKET_END) {
+                    ESP_LOGI(TAG, "SLAVE: END command confirmed. Transfer complete.");
+                    slave_state      = SLAVE_FSM_IDLE;
+                    next_tx_header   = 0x00;
+                } else {
+                    ESP_LOGW(TAG, "SLAVE: Unexpected cmd 0x%02X while WAIT_END_CONFIRM.", received_cmd);
+                    next_tx_header   = 0x00;
+                }
+                break;
+
+            case SLAVE_FSM_DATA_RECEIVE:
+                if (received_cmd == PACKET_DAT) {
+                    ESP_LOGI(TAG, "SLAVE: DATA packet received in DATA state.");
+                    // Optionally log or process the entire data payload.
+                    // e.g. ESP_LOG_BUFFER_HEX("DATA", rx_buffer, MSG_BUF_SIZE);
+                    next_tx_header   = 0x00;
+                } else {
+                    ESP_LOGW(TAG, "SLAVE: Unexpected cmd 0x%02X in DATA state, echoing it.", received_cmd);
+                    // If you want to echo unexpected commands:
+                    next_tx_header   = received_cmd;
+                }
+                break;
+
+            default:
+                next_tx_header = 0xDD;
+                break;
+        }
+
+        // ------------------------------------------------------------------
+        // 5. (Optional) Visual feedback
+        // ------------------------------------------------------------------
+        gpio_set_level(GPIO_LED, 1);
+        vTaskDelay(pdMS_TO_TICKS(50));
+        gpio_set_level(GPIO_LED, 0);
+    }
 }
