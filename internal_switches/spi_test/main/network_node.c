@@ -148,7 +148,7 @@ esp_err_t spi_master_init(void) {
 }
 
 int spi_master_send_data(uint8_t packet_type, const uint8_t *data, size_t len) {
-    // Allocate transmit buffer: header (1 byte) + data (len bytes)
+    // Phase 1: Send the packet over SPI.
     size_t tx_len = len + 1;
     uint8_t *tx_buffer = heap_caps_malloc(tx_len, MALLOC_CAP_DMA);
     if (!tx_buffer) {
@@ -156,48 +156,52 @@ int spi_master_send_data(uint8_t packet_type, const uint8_t *data, size_t len) {
         return 0;
     }
     tx_buffer[0] = packet_type;
-    memcpy(&tx_buffer[1], data, len);
-    
-    // Prepare SPI transaction: we set rxlength to 8 bits to read 1 byte ACK back.
-    spi_transaction_t trans = {
-        .length = tx_len * 8,   // Total bits to send
-        .tx_buffer = tx_buffer,
-        .rxlength = 8,          // Expect 8 bits (1 byte) of response
-    };
-    // Allocate DMA-capable receive buffer for the ACK byte
-    uint8_t *rx_buffer = heap_caps_malloc(1, MALLOC_CAP_DMA);
-    if (!rx_buffer) {
-        ESP_LOGE("SPI_MASTER", "Failed to allocate rx_buffer");
-        free(tx_buffer);
-        return 0;
+    if (len > 0 && data) {
+        memcpy(&tx_buffer[1], data, len);
     }
-    trans.rx_buffer = rx_buffer;
     
-    const int max_attempts = 5;
+    spi_transaction_t trans1 = {0};
+    trans1.length = tx_len * 8;    // Total bits to send
+    trans1.tx_buffer = tx_buffer;
+    trans1.rx_buffer = NULL;       // Ignore received data in this phase
+    
+    esp_err_t ret = spi_device_transmit(spi_master_handle, &trans1);
+    free(tx_buffer);
+    if (ret != ESP_OK) {
+         ESP_LOGE("SPI_MASTER", "SPI TX transaction failed: %s", esp_err_to_name(ret));
+         return 0;
+    }
+    
+    // Phase 2: Initiate a second transaction to read the ACK from the slave.
+    uint8_t dummy_tx = 0xFF;   // Dummy value; content doesn't matter
+    uint8_t ack = 0;
+    spi_transaction_t trans2 = {0};
+    trans2.length = 8;         // 8 bits for 1 byte transaction
+    trans2.tx_buffer = &dummy_tx;
+    trans2.rx_buffer = &ack;
+    trans2.rxlength = 8;
+    
+    const int max_attempts = 3;
     int attempt = 0;
-    esp_err_t ret;
     int result = 0;
     while (attempt < max_attempts) {
-         ret = spi_device_transmit(spi_master_handle, &trans);
+         ret = spi_device_transmit(spi_master_handle, &trans2);
          if (ret == ESP_OK) {
-             uint8_t ack = rx_buffer[0];
              if (ack == PACKET_ACK) {
-                 result = 1; // ACK received successfully
+                 result = 1; // ACK received
                  break;
              } else {
-                 ESP_LOGW("SPI_MASTER", "Received non-ACK (0x%02x), attempt %d", ack, attempt + 1);
+                 ESP_LOGW("SPI_MASTER", "Received invalid ACK: 0x%02X, attempt %d", ack, attempt + 1);
              }
          } else {
-             ESP_LOGE("SPI_MASTER", "SPI transmit failed: %s", esp_err_to_name(ret));
+             ESP_LOGE("SPI_MASTER", "SPI RX transaction failed: %s", esp_err_to_name(ret));
          }
          attempt++;
-         vTaskDelay(pdMS_TO_TICKS(10));  // short delay before retrying
+         vTaskDelay(pdMS_TO_TICKS(10));  // Delay before retrying
     }
-    
-    free(tx_buffer);
-    free(rx_buffer);
     return result;
 }
+
 
 int spi_master_read_data(uint8_t *header, uint8_t *data, size_t data_len) {
     size_t rx_len = data_len + 1; // header + data
