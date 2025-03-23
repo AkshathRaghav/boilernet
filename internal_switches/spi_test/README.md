@@ -191,7 +191,7 @@ Additionally, if the example works with certain SD cards but encounters issues w
 PIN 14 CLK   10049 cycles
 PIN 15 MOSI  10034 cycles
 PIN  2 MISO  10034 cycles
-PIN 13 CS    10034 cycles
+PIN 13 CS    34 cycles
 
 **** PIN recovery time with weak pullup ****
 

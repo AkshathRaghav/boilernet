@@ -7,8 +7,8 @@ ser = serial.Serial('/dev/ttyUSB0', 115200, timeout=2)
 
 
 file_path = "test.txt"
-file_path = "/home/araviki/workbench/boilernet/internal_switches/spi_test/README.md"
-file_path = "/home/araviki/workbench/boilernet/internal_switches/spi_test/QualificationsScreenshot.webp"
+# file_path = "/home/araviki/workbench/boilernet/internal_switches/spi_test/README.md"
+# file_path = "/home/araviki/workbench/boilernet/internal_switches/spi_test/QualificationsScreenshot.webp"
 chunk_size = 1024  # Must match ESP32 buffer size
 
 

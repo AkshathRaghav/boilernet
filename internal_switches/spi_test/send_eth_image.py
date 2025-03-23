@@ -6,22 +6,15 @@ import time
 from enum import Enum
 
 from PIL import Image
+import lz4.frame
 
-# --------------------------
-# Protocol definitions:
-# --------------------------
-# Packet Types
 PACKET_TYPE_START = 0xA0
 PACKET_TYPE_DATA  = 0xA1
 PACKET_TYPE_MID   = 0xA2
 PACKET_TYPE_END   = 0xA3
 
-# Packet sizes and offsets
-DATA_PACKET_SIZE = 1024  # Fixed data packet size (payload only)
+DATA_PACKET_SIZE = 1024  
 
-# --------------------------
-# Finite State Machine States
-# --------------------------
 class State(Enum):
     IDLE = 0
     SEND_START = 1
@@ -108,21 +101,35 @@ def fsm_image_transfer(sock, image_path):
 
     width, height = image.size
     raw_data = image.tobytes()  # raw RGB bytes
-    total_data_len = len(raw_data)
-    print(f"Image loaded: {width}x{height}, total {total_data_len} bytes")
 
-    # Determine mid point (using number of data packets)
-    num_full_packets = total_data_len // DATA_PACKET_SIZE
-    remainder = total_data_len % DATA_PACKET_SIZE
-    total_packets = num_full_packets + (1 if remainder > 0 else 0)
+    # Break the raw image into chunks, compress each using LZ4,
+    # and then adjust so that every compressed chunk has an even number of bytes.
+    compressed_chunks = []
+    for i in range(0, len(raw_data), DATA_PACKET_SIZE):
+        data_chunk = raw_data[i:i+DATA_PACKET_SIZE]
+        comp_chunk = lz4.frame.compress(data_chunk)
+        # If the compressed chunk length is odd, append one padding byte.
+        if len(comp_chunk) % 2 != 0:
+            comp_chunk += b'\x00'
+        compressed_chunks.append(comp_chunk)
+
+    total_packets = len(compressed_chunks)
+    total_data_len = sum(len(chunk) for chunk in compressed_chunks)
     mid_packet_index = total_packets // 2  # when to send MID packet
+
+    # Calculate checksum over the concatenated compressed chunks.
+    comp_checksum = calculate_checksum(b"".join(compressed_chunks))
+
+    print(f"Image loaded: {width}x{height}, raw {len(raw_data)} bytes")
+    print(f"Compressed into {total_data_len} bytes over {total_packets} packets.")
+    print(f"Checksum over compressed data: {comp_checksum:#010x}")
 
     state = State.SEND_START
     current_packet = 0  # counter for data packets sent
 
     while state != State.COMPLETE and state != State.ERROR:
         if state == State.SEND_START:
-            # Build and send START packet
+            # Build and send START packet with total compressed data length.
             start_packet = create_start_packet(width, height, total_data_len)
             sock.sendall(start_packet)
             print("Sent START packet.")
@@ -137,25 +144,18 @@ def fsm_image_transfer(sock, image_path):
                 state = State.ERROR
 
         elif state == State.SEND_DATA:
-            # Send full 1024 byte data packets until we reach mid
-            start_idx = current_packet * DATA_PACKET_SIZE
-            end_idx = start_idx + DATA_PACKET_SIZE
-            # check bounds
-            if start_idx >= total_data_len:
+            if current_packet >= total_packets:
                 state = State.SEND_END
                 continue
 
-            data_chunk = raw_data[start_idx:end_idx]
-            data_packet = create_data_packet(data_chunk)
+            comp_chunk = compressed_chunks[current_packet]
+            data_packet = create_data_packet(comp_chunk)
             sock.sendall(data_packet)
             # print(f"Sent DATA packet {current_packet+1}/{total_packets}")
-
             current_packet += 1
 
             if current_packet == mid_packet_index:
                 state = State.SEND_MID
-
-            # When we've sent all full packets, check if there's remaining data.
             elif current_packet == total_packets:
                 state = State.SEND_END
 
@@ -163,7 +163,6 @@ def fsm_image_transfer(sock, image_path):
             mid_packet = create_mid_packet()
             sock.sendall(mid_packet)
             print("Sent MID packet.")
-            # For simplicity, do not wait for an ACK for MID (or you can add if needed)
             state = State.WAIT_MID_ACK  # Continue sending the rest
 
         elif state == State.WAIT_MID_ACK:
@@ -175,11 +174,9 @@ def fsm_image_transfer(sock, image_path):
                 state = State.ERROR
 
         elif state == State.SEND_END:
-            # Calculate checksum over entire raw data.
-            checksum = calculate_checksum(raw_data)
-            end_packet = create_end_packet(checksum)
+            end_packet = create_end_packet(comp_checksum)
             sock.sendall(end_packet)
-            print(f"Sent END packet with checksum {checksum:#010x}")
+            print(f"Sent END packet with checksum {comp_checksum:#010x}")
             state = State.WAIT_END_ACK
 
         elif state == State.WAIT_END_ACK:
@@ -199,9 +196,6 @@ def fsm_image_transfer(sock, image_path):
     else:
         print("FSM: Transfer encountered an error.")
 
-# --------------------------
-# Main function
-# --------------------------
 def main():
     if len(sys.argv) != 4:
         print("Usage: python transfer_image.py <image_file> <ESP32_IP> <port>")
@@ -211,13 +205,11 @@ def main():
     esp32_ip = sys.argv[2]
     port = int(sys.argv[3])
 
-    # Create TCP socket connection
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         print(f"Connecting to {esp32_ip}:{port}...")
         sock.connect((esp32_ip, port))
         print("Connected to ESP32.")
 
-        # Run the finite state machine for image transfer
         fsm_image_transfer(sock, image_file)
 
 if __name__ == "__main__":

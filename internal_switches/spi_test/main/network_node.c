@@ -2,21 +2,13 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>
-#include <errno.h>
-#include <sys/socket.h>
-#include <netdb.h>
 
-#include "driver/spi_master.h"
-#include "driver/gpio.h"
-
-// FreeRTOS
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 #include "freertos/queue.h"
 #include "freertos/event_groups.h"
 
-// ESP-IDF Components
 #include "esp_netif.h"
 #include "esp_eth.h"
 #include "esp_wifi.h"
@@ -27,14 +19,25 @@
 #include "esp_eth_driver.h"
 #include "esp_check.h"
 #include "esp_mac.h"
-
-// lwIP
+#include <string.h>
+#include <sys/errno.h>
+#include <sys/socket.h>
+#include <netdb.h>
 #include "lwip/sockets.h"
 #include "lwip/netdb.h"
-#include "lwip/inet.h"
-#include "lwip/dns.h"
+#include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
-// ######################################################################
+#include "lwip/sockets.h"
+#include "lwip/dns.h"
+#include "lwip/netdb.h"
+
+#define ETH_PHY_ADDR             1
+#define ETH_PHY_RST_GPIO        -1          // not connected
+#define ETH_MDC_GPIO            23
+#define ETH_MDIO_GPIO           18
+#define ETH_TAG                 "ETH"
 
 static EventGroupHandle_t s_eth_event_group;
 
@@ -49,59 +52,49 @@ static EventGroupHandle_t s_eth_event_group;
     #define NETMASK     "255.255.255.0"
 #endif /* STATIC_IP */
 
-#define ETH_PHY_ADDR             1
-#define ETH_PHY_RST_GPIO        -1          // not connected
-#define ETH_MDC_GPIO            23
-#define ETH_MDIO_GPIO           18
-#define ETH_TAG                 "ETH"
-
-#define PORT 8080
-
-#define PACKET_TYPE_START  0xA0
-#define PACKET_TYPE_DATA   0xA1
-#define PACKET_TYPE_MID    0xA2
-#define PACKET_TYPE_END    0xA3
-
 static netif_input_fn default_input = NULL;
 
-extern void ethernet_setup(void);  
 
-// Ethernet FSM state.
+#include <stdio.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <errno.h>
+#include "esp_eth.h"
+#include "esp_netif.h"
+#include "esp_event.h"
+#include "esp_log.h"
+#include "nvs_flash.h"
+#include "lwip/inet.h"
+#include "lwip/netdb.h"
+#include "lwip/sockets.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
+// Make sure your Ethernet setup functions are defined somewhere, for example:
+extern void ethernet_setup(void);   // Your Ethernet initialization code
+// And a global event group or similar mechanism used in ethernet_setup, if any.
+
+// Packet type definitions
+#define PACKET_TYPE_START 0xA0
+#define PACKET_TYPE_DATA  0xA1
+#define PACKET_TYPE_MID   0xA2
+#define PACKET_TYPE_END   0xA3
+
+#define PORT 8080
+static const char *TAG = "TCP_SOCKET";
+
+// FSM states
 typedef enum {
     FSM_WAIT_START,
-    FSM_WAIT_DATA,
-    FSM_WAIT_MID,
+    FSM_WAIT_DATA,    // After START received, before MID or END
+    FSM_WAIT_MID,     // After MID marker received (optional state; we simply mark that MID is reached)
     FSM_WAIT_END,
     FSM_COMPLETE,
     FSM_ERROR
 } fsm_state_t;
 
-// ######################################################################
-
-#define PACKET_START_WRITE 0xA5  // SPI command to indicate start writing
-#define PACKET_DAT         0xA6  // SPI data packet (same as before)
-#define PACKET_MID         0xA7  // SPI middle packet
-#define PACKET_END         0xA8  // SPI finish packet
-#define PACKET_FUC         0xF9  // SPI error condition
-
-#define PIN_NUM_MOSI  13
-#define PIN_NUM_MISO  12
-#define PIN_NUM_CLK   14
-#define PIN_NUM_CS    15
-
-#define MSG_BUF_SIZE 1024
-#define MAX_RETRIES 5
-
-static spi_device_handle_t spi_master_handle = NULL;
-
-#define SPI_HOST_TYPE HSPI_HOST
-
-// ######################################################################
-
-static const char *TAG = "MASTER";
-
-// ######################################################################
-
+// Helper function: read exactly len bytes from a socket
 static int recv_all(int sock, void *buffer, size_t len) {
     size_t received = 0;
     uint8_t *buf = (uint8_t *)buffer;
@@ -113,136 +106,6 @@ static int recv_all(int sock, void *buffer, size_t len) {
         received += r;
     }
     return 0;
-}
-
-esp_err_t spi_master_init(void)
-{
-    esp_err_t ret;
-    spi_bus_config_t buscfg = {
-        .mosi_io_num = PIN_NUM_MOSI,           // Adjust pin numbers as needed
-        .miso_io_num = PIN_NUM_MISO,
-        .sclk_io_num = PIN_NUM_CLK,
-        .quadwp_io_num = -1,
-        .quadhd_io_num = -1,
-        .max_transfer_sz = MSG_BUF_SIZE,  // Ensure this is large enough for your transfers
-    };
-
-
-    ret = spi_bus_initialize(SPI_HOST_TYPE, &buscfg, SPI_DMA_CH_AUTO);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to initialize SPI bus: %s", esp_err_to_name(ret));
-        return ret;
-    }
-
-    spi_device_interface_config_t devcfg = {
-        .clock_speed_hz = 5000000,
-        .mode = 0,
-        .spics_io_num = PIN_NUM_CS,          // CS pin
-        .queue_size = 3,
-        .command_bits = 0,
-        .address_bits = 0,
-        .dummy_bits = 0,
-        .duty_cycle_pos = 128,
-        .cs_ena_posttrans = 3,
-    };
-
-    ret = spi_bus_add_device(SPI_HOST_TYPE, &devcfg, &spi_master_handle);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to add SPI device: %s", esp_err_to_name(ret));
-    }
-    return ret;
-}
-
-int SPI_send_confirm_command(uint8_t cmd, const uint8_t *data, size_t len)
-{
-    // Allocate one DMA-capable TX and RX buffer.
-    uint8_t *tx_buffer = heap_caps_malloc(MSG_BUF_SIZE, MALLOC_CAP_DMA);
-    uint8_t *rx_buffer = heap_caps_malloc(MSG_BUF_SIZE, MALLOC_CAP_DMA);
-    if (!tx_buffer || !rx_buffer) {
-        ESP_LOGE(TAG, "Failed to allocate DMA buffers");
-        if (tx_buffer) free(tx_buffer);
-        if (rx_buffer) free(rx_buffer);
-        return 0;
-    }
-
-    // Initialize buffers.
-    memset(tx_buffer, 0, MSG_BUF_SIZE);
-    memset(rx_buffer, 0, MSG_BUF_SIZE);
-    tx_buffer[0] = cmd;
-    if (data && len > 0 && (len < MSG_BUF_SIZE)) {
-        memcpy(&tx_buffer[1], data, len);
-    }
-
-    // Set up the common SPI transaction structure.
-    spi_transaction_t trans;
-    memset(&trans, 0, sizeof(trans));
-    trans.length = MSG_BUF_SIZE * 8; // transfer length in bits
-    trans.tx_buffer = &tx_buffer;
-    trans.rx_buffer = &rx_buffer;
-
-    int retry = 0;
-    while (retry < MAX_RETRIES) {
-        // First transaction: send command to let slave prepare its response.
-        esp_err_t ret = spi_device_transmit(spi_master_handle, &trans);
-        if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "SPI transmit error on attempt %d (first transaction): %s", retry, esp_err_to_name(ret));
-        }
-
-        // Optionally wait a short time for the slave to update its TX buffer.
-        vTaskDelay(pdMS_TO_TICKS(10));
-
-        // Second transaction: send the command again and capture the slave's response.
-        // Clear the RX buffer before the second transfer.
-        memset(rx_buffer, 0, MSG_BUF_SIZE);
-        ret = spi_device_transmit(spi_master_handle, &trans);
-        if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "SPI transmit error on attempt %d (second transaction): %s", retry, esp_err_to_name(ret));
-        } else {
-            // Check if the slave echoed the command header.
-            if (rx_buffer[0] == cmd) {
-                ESP_LOGI(TAG, "SPI confirm: Received expected header 0x%02X", rx_buffer[0]);
-                free(tx_buffer);
-                free(rx_buffer);
-                return 1;
-            } else {
-                ESP_LOGW(TAG, "SPI confirm invalid on attempt %d: Received 0x%02X, expected 0x%02X", 
-                         retry, rx_buffer[0], cmd);
-            }
-        }
-        retry++;
-        vTaskDelay(pdMS_TO_TICKS(100));
-    }
-
-    free(tx_buffer);
-    free(rx_buffer);
-    return 0;
-}
-
-int SPI_send_command_no_confirm(uint8_t cmd, const uint8_t *data, size_t len)
-{
-    uint8_t *tx_buffer = heap_caps_malloc(MSG_BUF_SIZE, MALLOC_CAP_DMA);
-    if (!tx_buffer) {
-        ESP_LOGE(TAG, "Failed to allocate TX buffer");
-        return 0;
-    }
-    memset(tx_buffer, 0, MSG_BUF_SIZE);
-    tx_buffer[0] = cmd;
-    if (data && len > 0 && (len < MSG_BUF_SIZE))
-        memcpy(&tx_buffer[1], data, len);
-
-    spi_transaction_t t;
-    memset(&t, 0, sizeof(t));
-    t.length = MSG_BUF_SIZE * 8;
-    t.tx_buffer = &tx_buffer;
-    t.rx_buffer = NULL; // No RX buffer needed
-
-    esp_err_t ret = spi_device_transmit(spi_master_handle, &t);
-    free(tx_buffer);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "SPI transmit (no confirm) error: %s", esp_err_to_name(ret));
-        return 0;
-    }
-    return 1;
 }
 
 static void tcp_server_task(void *pvParameters)
@@ -296,6 +159,8 @@ static void tcp_server_task(void *pvParameters)
         socklen_t addr_len = sizeof(source_addr);
         ESP_LOGI(TAG, "Waiting for a connection...");
 
+        
+
         // Accept incoming connection (blocking call)
         int sock = accept(listen_sock, (struct sockaddr *)&source_addr, &addr_len);
         if (sock < 0) {
@@ -328,7 +193,8 @@ static void tcp_server_task(void *pvParameters)
                 state = FSM_ERROR;
                 break;
             }
-            // Process each packet type.
+            // ESP_LOGI(TAG, "Received packet type: 0x%02X", pkt_type);
+// 
             switch(pkt_type) {
                 case PACKET_TYPE_START:
                 {
@@ -351,14 +217,6 @@ static void tcp_server_task(void *pvParameters)
                     total_len = (buffer[4] << 24) | (buffer[5] << 16) | (buffer[6] << 8) | buffer[7];
                     expected_total_data = total_len;
                     ESP_LOGI(TAG, "START: Image dimensions: %dx%d, total data: %u bytes", width, height, total_len);
-
-                    // Send SPI command for START via confirmation function.
-                    if (!SPI_send_confirm_command(PACKET_START_WRITE, NULL, 0)) {
-                        ESP_LOGE(TAG, "SPI START command failed");
-                        state = FSM_ERROR;
-                        break;
-                    }
-
                     // Send ACK for START (send one byte same as packet type)
                     if (send(sock, &pkt_type, 1, 0) < 0) {
                         ESP_LOGE(TAG, "Failed to send START ACK");
@@ -391,20 +249,18 @@ static void tcp_server_task(void *pvParameters)
                             state = FSM_ERROR;
                             break;
                         }
-                        // Update computed checksum
+                        // Print received data to the console (as hex values)
+                        // ESP_LOGI(TAG, "DATA packet (%d bytes):", data_len);
                         for (int i = 0; i < data_len; i++) {
+                            // printf("%02X ", data_chunk[i]);
+                            // Update computed checksum
                             computed_checksum += data_chunk[i];
                         }
-                        // Forward the received DATA packet to the SPI slave (no confirmation).
-                        if (!SPI_send_command_no_confirm(PACKET_TYPE_DATA, data_chunk, data_len)) {
-                            ESP_LOGE(TAG, "SPI DATA transmission failed");
-                            free(data_chunk);
-                            state = FSM_ERROR;
-                            break;
-                        }
+                        // printf("\n");
                         received_data += data_len;
                         free(data_chunk);
                     }
+                    // Stay in DATA state. Optionally, you might change state after a threshold.
                     break;
                 }
                 case PACKET_TYPE_MID:
@@ -417,16 +273,9 @@ static void tcp_server_task(void *pvParameters)
                         break;
                     }
                     ESP_LOGI(TAG, "MID packet received (halfway marker). Total received so far: %u bytes", received_data);
-                    
-                    // Send TCP ACK for MID.
+                    // Optionally send an ACK for MID if needed
                     if (send(sock, &pkt_type, 1, 0) < 0) {
                         ESP_LOGE(TAG, "Failed to send MID ACK");
-                        state = FSM_ERROR;
-                        break;
-                    }
-                    // Send SPI command for MID confirmation.
-                    if (!SPI_send_confirm_command(PACKET_MID, NULL, 0)) {
-                        ESP_LOGE(TAG, "SPI MID command failed");
                         state = FSM_ERROR;
                         break;
                     }
@@ -448,21 +297,16 @@ static void tcp_server_task(void *pvParameters)
                         ESP_LOGE(TAG, "Checksum mismatch!");
                         state = FSM_ERROR;
                     } else {
-                        vTaskDelay(100 / portTICK_PERIOD_MS);
-                        // Send SPI command for END confirmation.
-                        if (!SPI_send_confirm_command(PACKET_END, NULL, 0)) {
-                            ESP_LOGE(TAG, "SPI END command failed");
-                            state = FSM_ERROR;
-                            break;
-                        }
-                        // Send TCP ACK for END.
-                        pkt_type = PACKET_TYPE_END;
-                        if (send(sock, &pkt_type, 1, 0) < 0) {
+                        vTaskDelay(100 / portTICK_PERIOD_MS);  
+                        // Send ACK for END packet
+                        pkt_type = PACKET_TYPE_END; 
+                        if (send(sock, &pkt_type, 1, 0) < 0)
+                        {
                             ESP_LOGE(TAG, "Failed to send END ACK");
                             state = FSM_ERROR;
                             break;
                         }
-                        vTaskDelay(100 / portTICK_PERIOD_MS);
+                        vTaskDelay(100 / portTICK_PERIOD_MS);  
                         state = FSM_COMPLETE;
                     }
                     break;
@@ -489,7 +333,7 @@ static void tcp_server_task(void *pvParameters)
 }
 
 
-
+/** Event handler for Ethernet events */
 static void eth_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
     uint8_t mac_addr[6] = {0};
@@ -525,6 +369,7 @@ static void eth_event_handler(void *arg, esp_event_base_t event_base, int32_t ev
     }
 }
 
+/** Event handler for IP_EVENT_ETH_GOT_IP */
 static void got_ip_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
     ip_event_got_ip_t *event = (ip_event_got_ip_t *) event_data;
@@ -659,14 +504,6 @@ void app_main(void)
     ethernet_setup();
     vTaskDelay(2000 / portTICK_PERIOD_MS);
     ESP_LOGI(ETH_TAG, "Ethernet Initialized!");
-
-    ESP_LOGI(TAG, "Master starting...");
-    if (spi_master_init() != ESP_OK) {
-        ESP_LOGE(TAG, "SPI master initialization failed");
-        return;
-    }
-    ESP_LOGI(ETH_TAG, "Started SPI Master");
-
     xTaskCreate(tcp_server_task, "tcp_server", 4096, NULL, 5, NULL);
     ESP_LOGI(ETH_TAG, "Started TCP server task");
 

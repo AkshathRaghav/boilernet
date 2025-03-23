@@ -33,11 +33,15 @@ void UartInit(void) {
 }
 
 int SDCardInit(void) {
+    ESP_LOGI("UARTTEST", "FIRST");
+
     esp_vfs_fat_sdmmc_mount_config_t mount_config = {
         .format_if_mount_failed = true,
         .max_files = 5,
         .allocation_unit_size = 16 * 1024
     };
+    ESP_LOGI("UARTTEST", "SECOND");
+
     sdmmc_card_t *card;
     const char mount_point[] = MOUNT_POINT;
     // host.max_freq_khz = SDMMC_FREQ_HIGHSPEED;
@@ -51,17 +55,20 @@ int SDCardInit(void) {
         .quadhd_io_num = -1,
         .max_transfer_sz = 4000,
     };
+    ESP_LOGI("UARTTEST", "THIRD");
 
     int ret = spi_bus_initialize(host.slot, &bus_cfg, SDSPI_DEFAULT_DMA);
     if (ret != ESP_OK) {
         return ret;
     }
+    ESP_LOGI("UARTTEST", "FOURTH");
 
     sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
     slot_config.gpio_cs = PIN_NUM_CS;
     slot_config.host_id = host.slot;
 
     ret = esp_vfs_fat_sdspi_mount(mount_point, &host, &slot_config, &mount_config, &card);
+    ESP_LOGI("UARTTEST", "FIFTH");
 
     if (ret != ESP_OK) {
         return ret; 
@@ -97,19 +104,16 @@ void size_t_to_string(size_t value, char *buffer, size_t buffer_size) {
 }
 
 void app_main() {
-    led_init(18);
-    led_init(19);
-    led_init(20);
-    led_init(9);
-    led_init(8);
-
     UartInit();
+    ESP_LOGI("UARTTEST", "Post  UART");
 
     int ret = SDCardInit();
     if (ret != ESP_OK) {
         keep_high(9);
         return;
     } 
+    ESP_LOGI("UARTTEST", "Post SPI");
+
         
     toggle_led(9); // Confirm all setup 
 

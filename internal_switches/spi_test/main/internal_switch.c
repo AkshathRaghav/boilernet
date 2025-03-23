@@ -17,7 +17,7 @@
 #define PIN_NUM_CS    15
 #define GPIO_LED      2
 
-#define MSG_BUF_SIZE  1024
+#define MSG_BUF_SIZE  1
 
 #define PACKET_START_WRITE 0xA5  // SPI command to indicate start writing
 #define PACKET_DAT         0xA6  // SPI data packet (same as before)
@@ -70,7 +70,7 @@ void app_main(void)
         .queue_size = 3,
         .flags = 0,
         .post_setup_cb = NULL,
-        .post_trans_cb = NULL, 
+        .post_trans_cb = NULL
     };
 
     // Enable pull-ups on the SPI bus lines.
@@ -116,8 +116,8 @@ void app_main(void)
         spi_slave_transaction_t trans;
         memset(&trans, 0, sizeof(trans));
         trans.length    = MSG_BUF_SIZE * 8; // in bits
-        trans.tx_buffer = &tx_buffer;
-        trans.rx_buffer = &rx_buffer;
+        trans.tx_buffer = tx_buffer;
+        trans.rx_buffer = rx_buffer;
 
         ret = spi_slave_queue_trans(SPI_HOST_TYPE, &trans, portMAX_DELAY);
         if (ret != ESP_OK) {
@@ -146,7 +146,7 @@ void app_main(void)
                 else if (received_cmd == PACKET_DAT) {
                     ESP_LOGI(TAG, "SLAVE: Received DATA packet.");
                     slave_state      = SLAVE_FSM_DATA_RECEIVE;
-                    next_tx_header   = 0x00; // No special confirmation needed
+                    next_tx_header   = 0xDD; // No special confirmation needed
                 }
                 else if (received_cmd == PACKET_MID) {
                     ESP_LOGI(TAG, "SLAVE: Received MID command. Waiting for confirmation...");
@@ -160,7 +160,7 @@ void app_main(void)
                 }
                 else {
                     ESP_LOGW(TAG, "SLAVE: Unknown command 0x%02X in IDLE state.", received_cmd);
-                    next_tx_header   = 0x00;
+                    next_tx_header   = 0xDD;
                 }
                 break;
 
@@ -168,10 +168,10 @@ void app_main(void)
                 if (received_cmd == PACKET_START_WRITE) {
                     ESP_LOGI(TAG, "SLAVE: START command confirmed. Switching to data receive.");
                     slave_state      = SLAVE_FSM_DATA_RECEIVE;
-                    next_tx_header   = 0x00;
+                    next_tx_header   = 0xDD;
                 } else {
                     ESP_LOGW(TAG, "SLAVE: Unexpected cmd 0x%02X while WAIT_START_CONFIRM.", received_cmd);
-                    next_tx_header   = 0x00;
+                    next_tx_header   = 0xDD;
                 }
                 break;
 
@@ -179,10 +179,10 @@ void app_main(void)
                 if (received_cmd == PACKET_MID) {
                     ESP_LOGI(TAG, "SLAVE: MID command confirmed. Switching to data receive.");
                     slave_state      = SLAVE_FSM_DATA_RECEIVE;
-                    next_tx_header   = 0x00;
+                    next_tx_header   = 0xDD;
                 } else {
                     ESP_LOGW(TAG, "SLAVE: Unexpected cmd 0x%02X while WAIT_MID_CONFIRM.", received_cmd);
-                    next_tx_header   = 0x00;
+                    next_tx_header   = 0xDD;
                 }
                 break;
 
@@ -190,10 +190,10 @@ void app_main(void)
                 if (received_cmd == PACKET_END) {
                     ESP_LOGI(TAG, "SLAVE: END command confirmed. Transfer complete.");
                     slave_state      = SLAVE_FSM_IDLE;
-                    next_tx_header   = 0x00;
+                    next_tx_header   = 0xDD;
                 } else {
                     ESP_LOGW(TAG, "SLAVE: Unexpected cmd 0x%02X while WAIT_END_CONFIRM.", received_cmd);
-                    next_tx_header   = 0x00;
+                    next_tx_header   = 0xDD;
                 }
                 break;
 
@@ -202,7 +202,7 @@ void app_main(void)
                     ESP_LOGI(TAG, "SLAVE: DATA packet received in DATA state.");
                     // Optionally log or process the entire data payload.
                     // e.g. ESP_LOG_BUFFER_HEX("DATA", rx_buffer, MSG_BUF_SIZE);
-                    next_tx_header   = 0x00;
+                    next_tx_header   = 0xDD;
                 } else {
                     ESP_LOGW(TAG, "SLAVE: Unexpected cmd 0x%02X in DATA state, echoing it.", received_cmd);
                     // If you want to echo unexpected commands:

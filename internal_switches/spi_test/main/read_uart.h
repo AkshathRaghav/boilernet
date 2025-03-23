@@ -21,10 +21,10 @@
 
 #define EXAMPLE_MAX_CHAR_SIZE    64
 #define CONFIG_EXAMPLE_DEBUG_PIN_CONNECTIONS
-#define PIN_NUM_MISO  6
-#define PIN_NUM_MOSI  4
-#define PIN_NUM_CLK   5
-#define PIN_NUM_CS    1
+#define PIN_NUM_MISO  19
+#define PIN_NUM_MOSI  23
+#define PIN_NUM_CLK   18
+#define PIN_NUM_CS    4
 #define CONFIG_EXAMPLE_FORMAT_IF_MOUNT_FAILED
 
 void uart_init();
