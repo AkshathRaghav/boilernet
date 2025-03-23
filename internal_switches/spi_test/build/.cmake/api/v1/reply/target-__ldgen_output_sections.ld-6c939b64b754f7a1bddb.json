@@ -1,0 +1,137 @@
+{
+	"backtrace" : 5,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_custom_target",
+			"__ldgen_process_template",
+			"target_linker_script",
+			"include"
+		],
+		"files" : 
+		[
+			"/root/esp/v5.4/esp-idf/tools/cmake/ldgen.cmake",
+			"/root/esp/v5.4/esp-idf/tools/cmake/utilities.cmake",
+			"/root/esp/v5.4/esp-idf/components/esp_system/ld/ld.cmake",
+			"/root/esp/v5.4/esp-idf/components/esp_system/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 3
+			},
+			{
+				"command" : 3,
+				"file" : 3,
+				"line" : 92,
+				"parent" : 0
+			},
+			{
+				"file" : 2,
+				"parent" : 1
+			},
+			{
+				"command" : 2,
+				"file" : 2,
+				"line" : 52,
+				"parent" : 2
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 148,
+				"parent" : 3
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 77,
+				"parent" : 4
+			}
+		]
+	},
+	"dependencies" : 
+	[
+		{
+			"id" : "__idf_xtensa::@1daaaad7abe597e030f9"
+		},
+		{
+			"id" : "__idf_esp_eth::@68140d310044213ed0bc"
+		},
+		{
+			"id" : "__idf_wear_levelling::@cb21b0d7c0815cff11c6"
+		},
+		{
+			"id" : "__idf_fatfs::@75ac1d9b25dacc8cc9e7"
+		},
+		{
+			"id" : "__idf_esp_adc::@847b8318c687ffb50ebb"
+		},
+		{
+			"id" : "__idf_sd_card::@44798962d42f7e2cac86"
+		},
+		{
+			"id" : "__idf_main::@7368607ed66887415643"
+		}
+	],
+	"id" : "__ldgen_output_sections.ld::@874df54e61e20112dfd4",
+	"name" : "__ldgen_output_sections.ld",
+	"paths" : 
+	{
+		"build" : "esp-idf/esp_system",
+		"source" : "/root/esp/v5.4/esp-idf/components/esp_system"
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "",
+			"sourceIndexes" : 
+			[
+				0
+			]
+		},
+		{
+			"name" : "CMake Rules",
+			"sourceIndexes" : 
+			[
+				1,
+				2
+			]
+		},
+		{
+			"name" : "Header Files",
+			"sourceIndexes" : 
+			[
+				3
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 5,
+			"isGenerated" : true,
+			"path" : "build/esp-idf/esp_system/CMakeFiles/__ldgen_output_sections.ld",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 0,
+			"isGenerated" : true,
+			"path" : "build/esp-idf/esp_system/CMakeFiles/__ldgen_output_sections.ld.rule",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 0,
+			"isGenerated" : true,
+			"path" : "build/esp-idf/esp_system/ld/sections.ld.rule",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 0,
+			"path" : "/root/esp/v5.4/esp-idf/components/esp_system/ld/esp32/sections.ld.in",
+			"sourceGroupIndex" : 2
+		}
+	],
+	"type" : "UTILITY"
+}

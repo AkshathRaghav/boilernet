@@ -19,7 +19,7 @@ static const char *TAG = "SPI_SLAVE";
 #define GPIO_CS       15
 
 // Transfer size: 128 bytes per transaction.
-#define TRANSFER_SIZE 128
+#define TRANSFER_SIZE 1024
 
 // Global variable to hold the last received command.
 volatile uint8_t last_cmd = 0;
@@ -119,4 +119,4 @@ void app_main(void)
         // Loop back for the next command.
     }
 }
-        
+    

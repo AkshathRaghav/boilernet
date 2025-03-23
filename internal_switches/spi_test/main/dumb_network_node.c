@@ -17,7 +17,7 @@
 #define PIN_NUM_CS    15
 
 // Transfer size: 128 bytes.
-#define TRANSFER_SIZE 128
+#define TRANSFER_SIZE 1024
 
 // Define our two commands.
 #define CMD_VALID   0xA5  // If slave sees this, it should reply with 0x11.
@@ -54,7 +54,7 @@ esp_err_t spi_master_init(void)
         .clock_speed_hz = 5000000,  // 5 MHz
         .mode = 0,
         .spics_io_num = PIN_NUM_CS,
-        .queue_size = 1,
+        .queue_size = 2,
         .command_bits = 0,
         .address_bits = 0,
         .dummy_bits = 0,
@@ -140,6 +140,6 @@ void app_main(void)
         }
 
         count++;
-        vTaskDelay(pdMS_TO_TICKS(2000));
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
