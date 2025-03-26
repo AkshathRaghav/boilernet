@@ -219,9 +219,9 @@ static int confirm_packet(uint8_t *rx_buf, uint8_t *expected_rx_buf) {
     {
         if ((i != 1) && (rx_buf[i] != expected_rx_buf[i])) { 
             if (i == 0) { 
-                ESP_LOGE(COMM_TAG, "    MISMATCH: SPI COMMAND: (expected 0x%02X, got 0x%02X)\n", expected_rx_buf[0], rx_buf[0]);
+                ESP_LOGE(COMM_TAG, "    MISMATCH: SPI COMMAND: expected 0x%02X, got 0x%02X\n", expected_rx_buf[0], rx_buf[0]);
             } else { 
-                ESP_LOGE(COMM_TAG, "    MISMATCH: DATA WRONG: [%d] (expected 0x%02X, got 0x%02X)", i, expected_rx_buf[i], rx_buf[i]);
+                ESP_LOGE(COMM_TAG, "    MISMATCH: DATA WRONG: [%d] 0x%02X, 0x%02X 0x%02X 0x%02X ... 0x%02X 0x%02X", i, expected_rx_buf[2], expected_rx_buf[3], expected_rx_buf[4], expected_rx_buf[5], expected_rx_buf[TRANSFER_SIZE - 2], expected_rx_buf[TRANSFER_SIZE - 1]);
             }
             return -1; 
         }
@@ -286,7 +286,7 @@ static int spi_send_packet(spi_transaction_t t, uint8_t *tx_buf, uint8_t *rx_buf
                 t.tx_buffer = tx_buf;
                 t.rx_buffer = rx_buf;
 
-                ESP_LOGW(COMM_TAG, "         %d -> Sending data: 0x%02X 0x%02X 0x%02X 0x%02X ...", attempt, tx_buf[0], tx_buf[1], tx_buf[2], tx_buf[3]);
+                ESP_LOGW(COMM_TAG, "         %d -> Sending data: 0x%02X 0x%02X 0x%02X 0x%02X ...", attempt, expected_rx_buf[0], expected_rx_buf[1], expected_rx_buf[2], expected_rx_buf[3]);
                 ret = spi_device_polling_transmit(spi_master_handle, &t);
                 if (ret != ESP_OK) {
                     ESP_LOGE(COMM_TAG, "             %d -> SPI transaction failed: %s", attempt, esp_err_to_name(ret));
@@ -295,7 +295,6 @@ static int spi_send_packet(spi_transaction_t t, uint8_t *tx_buf, uint8_t *rx_buf
                 ESP_LOGW(COMM_TAG, "         %d -> Received data: 0x%02X 0x%02X 0x%02X 0x%02X ...", attempt, rx_buf[0], rx_buf[1], rx_buf[2], rx_buf[3]);
 
                 if (confirm_packet(rx_buf, expected_rx_buf) != 0) {
-                    attempt++;
                     continue;
                 }
 
@@ -303,11 +302,13 @@ static int spi_send_packet(spi_transaction_t t, uint8_t *tx_buf, uint8_t *rx_buf
 
                 wait_for_slave_ready();
 
+                // memset(&t, 0, sizeof(t));
+                // t.length = TRANSFER_SIZE * 8;  // in bits.
                 tx_buf[1] = 1;
                 t.tx_buffer = tx_buf;
                 t.rx_buffer = rx_buf;
 
-                ESP_LOGW(COMM_TAG, "         %d -> Sending SAME data: 0x%02X 0x%02X 0x%02X 0x%02X ...", attempt, tx_buf[0], tx_buf[1], tx_buf[2], tx_buf[3]);
+                ESP_LOGW(COMM_TAG, "         %d -> Sending data: 0x%02X 0x%02X 0x%02X 0x%02X ...", attempt, expected_rx_buf[0], expected_rx_buf[1], expected_rx_buf[2], expected_rx_buf[3]);
                 ret = spi_device_polling_transmit(spi_master_handle, &t);
                 if (ret != ESP_OK) {
                     ESP_LOGE(COMM_TAG, "         %d -> SPI transaction failed: %s", attempt, esp_err_to_name(ret));
@@ -316,22 +317,23 @@ static int spi_send_packet(spi_transaction_t t, uint8_t *tx_buf, uint8_t *rx_buf
                 ESP_LOGW(COMM_TAG, "         %d -> Received data: 0x%02X 0x%02X 0x%02X 0x%02X ...", attempt, rx_buf[0], rx_buf[1], rx_buf[2], rx_buf[3]);
 
                 if (confirm_packet(rx_buf, tx_buf) != 0) {
-                    attempt++;
                     continue;
                 }
+
+                attempt++;
             }
 
             return -1; 
         } else { 
-            tx_buf[1] = 1;
-            return 0; 
+            tx_buf[1] = 1; 
         }
     }
     else
     {
         tx_buf[1] = 1;
-        return 0; 
     }
+
+    return 0;
 }
 
 

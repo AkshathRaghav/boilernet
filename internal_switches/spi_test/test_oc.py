@@ -1,70 +1,47 @@
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-import numpy as np
+#!/usr/bin/env python3
+import sys
+import os
+import lz4.frame
 
-# Define the systolic array grid dimensions (4x4 for the kernel)
-grid_rows, grid_cols = 4, 4
+def main():
+    if len(sys.argv) < 2:
+        print("Usage: python lz4_chunk_compression.py <filename>")
+        return
 
-# Create figure and axis
-fig, ax = plt.subplots(figsize=(6,6))
-ax.set_xlim(0, grid_cols)
-ax.set_ylim(0, grid_rows)
-ax.set_xticks(np.arange(0, grid_cols+1, 1))
-ax.set_yticks(np.arange(0, grid_rows+1, 1))
-ax.grid(True)
+    filename = sys.argv[1]
+    if not os.path.exists(filename):
+        print("File not found:", filename)
+        return
 
-# Invert y-axis so that (0,0) is at the top-left
-ax.invert_yaxis()
+    with open(filename, 'rb') as f:
+        data = f.read()
 
-# Pre-create text objects for each cell in the grid
-cell_texts = [[ax.text(j + 0.5, i + 0.5, "", ha="center", va="center", fontsize=16)
-               for j in range(grid_cols)] for i in range(grid_rows)]
+    total_size = len(data)
+    print("Original file size: {} bytes".format(total_size))
 
-# Define the 4x4 input patch (each element represents an activation)
-# (This would be one sliding window from your overall 6x6 input patch.)
-activations = np.array([["a00", "a01", "a02", "a03"],
-                        ["a10", "a11", "a12", "a13"],
-                        ["a20", "a21", "a22", "a23"],
-                        ["a30", "a31", "a32", "a33"]])
+    # Set number of chunks
+    num_chunks = 8
+    chunk_size = total_size // num_chunks
+    total_compressed = 0
 
-# Total number of frames:
-# For a 4x4 grid, a simple diagonal wavefront will require (rows + cols - 1) frames.
-total_frames = grid_rows + grid_cols
+    print("\nCompressing in {} chunks:".format(num_chunks))
+    for i in range(num_chunks):
+        start = i * chunk_size
+        # Make sure the last chunk takes any remaining bytes.
+        if i == num_chunks - 1:
+            chunk = data[start:]
+        else:
+            chunk = data[start:start+chunk_size]
+        compressed = lz4.frame.compress(chunk)
+        comp_size = len(compressed)
+        total_compressed += comp_size
+        print("  Chunk {:d}: Original = {:d} bytes, Compressed = {:d} bytes".format(i+1, len(chunk), comp_size))
 
-# To hold a reference to the output arrow (so we can update it)
-output_arrow = None
+    print("\nTotal compressed size (8 chunks): {} bytes".format(total_compressed))
 
-def update(frame):
-    global output_arrow
-    # Clear texts in all cells each frame
-    for i in range(grid_rows):
-        for j in range(grid_cols):
-            cell_texts[i][j].set_text("")
-    
-    # For each cell (i, j), if i+j equals the current frame number, show the activation
-    for i in range(grid_rows):
-        for j in range(grid_cols):
-            if i + j == frame and i < activations.shape[0] and j < activations.shape[1]:
-                cell_texts[i][j].set_text(activations[i, j])
-    
-    # Remove previous output annotation, if any
-    if output_arrow is not None:
-        output_arrow.remove()
-        output_arrow = None
+    # Also compress the entire file in one block for comparison.
+    full_compressed = lz4.frame.compress(data)
+    print("Compressed size (entire file): {} bytes".format(len(full_compressed)))
 
-    # When the wave reaches the bottom-right cell, simulate the output being shifted out.
-    # Here, we assume that at frame = total_frames - 1, the bottom-right cell (3,3) holds the final computed result.
-    if frame >= total_frames - 1:
-        output_arrow = ax.annotate("Output", 
-                                   xy=(grid_cols - 0.5, grid_rows - 0.5), 
-                                   xytext=(grid_cols + 0.5, grid_rows - 0.5),
-                                   arrowprops=dict(arrowstyle="->", lw=2),
-                                   fontsize=16)
-    return sum(cell_texts, []) + ([output_arrow] if output_arrow is not None else [])
-
-# Create the animation (1 second per frame for clarity)
-ani = animation.FuncAnimation(fig, update, frames=total_frames, interval=1000, blit=True)
-
-plt.title("Systolic Array Dataflow for conv2d (4×4 window)")
-plt.tight_layout()
-plt.show()
+if __name__ == '__main__':
+    main()

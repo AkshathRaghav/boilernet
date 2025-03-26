@@ -12,7 +12,7 @@ PACKET_TYPE_DATA  = 0xA1
 PACKET_TYPE_MID   = 0xA2
 PACKET_TYPE_END   = 0xA3
 
-DATA_PACKET_SIZE = 1024  
+DATA_PACKET_SIZE = 2030
 
 class State(Enum):
     IDLE = 0
@@ -91,19 +91,17 @@ def wait_for_ack(sock, expected_ack, timeout=5):
 # FSM for Image Transfer
 # --------------------------
 def fsm_image_transfer(sock, image_path):
-    # Load image and convert to RGB bytes
     try:
-        image = Image.open(image_path).convert("RGB")
+        with open(image_path, 'rb') as f:
+            raw_data = f.read()
     except Exception as e:
         print("Error loading image:", e)
         return
 
-    width, height = image.size
-    raw_data = image.tobytes()  # raw RGB bytes
+    width, height = 25, 25
     total_data_len = len(raw_data)
     print(f"Image loaded: {width}x{height}, total {total_data_len} bytes")
 
-    # Determine mid point (using number of data packets)
     num_full_packets = total_data_len // DATA_PACKET_SIZE
     remainder = total_data_len % DATA_PACKET_SIZE
     total_packets = num_full_packets + (1 if remainder > 0 else 0)
@@ -205,7 +203,10 @@ def main():
         sock.connect((esp32_ip, port))
         print("Connected to ESP32.")
 
+        start = time.time() 
         fsm_image_transfer(sock, image_file)
+        end = time.time() 
+        print("Total Time: ", end - start)
 
 if __name__ == "__main__":
     main()

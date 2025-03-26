@@ -1,6 +1,10 @@
+set(srcs "network_node.c")
+# set(srcs "internal_switch.c")
+
 # set(srcs "new_network_node.c")
 # set(srcs "new_internal_switch.c")
-set(srcs "dumb_network_node.c")
+
+# set(srcs "dumb_network_node.c")
 # set(srcs "dumb_internal_switch.c")
 
 idf_component_register(SRCS ${srcs}

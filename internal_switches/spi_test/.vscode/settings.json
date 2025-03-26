@@ -4,7 +4,7 @@
     "idf.openOcdConfigs": [
         "board/esp32-wrover-kit-1.8v.cfg"
     ],
-    "idf.port": "/dev/ttyUSB1",
+    "idf.port": "/dev/ttyUSB0",
     "idf.toolsPath": "/root/.espressif",
     "idf.flashType": "UART",
     "idf.customExtraVars": {
@@ -16,6 +16,7 @@
         "stddef.h": "c",
         "task.h": "c",
         "spi_slave.h": "c",
-        "spi_common.h": "c"
+        "spi_common.h": "c",
+        "esp_random.h": "c"
     }
 }

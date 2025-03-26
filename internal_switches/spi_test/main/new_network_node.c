@@ -2,21 +2,13 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>
-#include <errno.h>
-#include <sys/socket.h>
-#include <netdb.h>
 
-#include "driver/spi_master.h"
-#include "driver/gpio.h"
-
-// FreeRTOS
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 #include "freertos/queue.h"
 #include "freertos/event_groups.h"
 
-// ESP-IDF Components
 #include "esp_netif.h"
 #include "esp_eth.h"
 #include "esp_wifi.h"
@@ -27,20 +19,53 @@
 #include "esp_eth_driver.h"
 #include "esp_check.h"
 #include "esp_mac.h"
-
-#include "esp_log.h"
-#include "driver/spi_master.h"
-#include "driver/gpio.h"
-#include "esp_system.h"
-#include "esp_err.h"
-
-// lwIP
+#include <string.h>
+#include <sys/errno.h>
+#include <sys/socket.h>
+#include <netdb.h>
 #include "lwip/sockets.h"
 #include "lwip/netdb.h"
-#include "lwip/inet.h"
-#include "lwip/dns.h"
+#include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
-// ######################################################################
+#include "lwip/sockets.h"
+#include "lwip/dns.h"
+#include "lwip/netdb.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "driver/spi_master.h"
+#include "driver/gpio.h"
+#include "esp_log.h"
+#include "esp_err.h"
+#include "esp_system.h"  // for esp_random()
+#include "esp_random.h"
+
+#include <stdio.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <errno.h>
+#include "esp_eth.h"
+#include "esp_netif.h"
+#include "esp_event.h"
+#include "esp_log.h"
+#include "nvs_flash.h"
+#include "lwip/inet.h"
+#include "lwip/netdb.h"
+#include "lwip/sockets.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
+#define ETH_PHY_ADDR             1
+#define ETH_PHY_RST_GPIO        -1          // not connected
+#define ETH_MDC_GPIO            23
+#define ETH_MDIO_GPIO           18
+#define ETH_TAG                 "ETH"
 
 static EventGroupHandle_t s_eth_event_group;
 
@@ -55,74 +80,68 @@ static EventGroupHandle_t s_eth_event_group;
     #define NETMASK     "255.255.255.0"
 #endif /* STATIC_IP */
 
-#define ETH_PHY_ADDR             1
-#define ETH_PHY_RST_GPIO        -1          // not connected
-#define ETH_MDC_GPIO            23
-#define ETH_MDIO_GPIO           18
-#define ETH_TAG                 "ETH"
-
-#define PORT 8080
-
-#define PACKET_TYPE_START  0xA0
-#define PACKET_TYPE_DATA   0xA1
-#define PACKET_TYPE_MID    0xA2
-#define PACKET_TYPE_END    0xA3
-
 static netif_input_fn default_input = NULL;
 
-extern void ethernet_setup(void);  
 
-// Ethernet FSM state.
+// Make sure your Ethernet setup functions are defined somewhere, for example:
+extern void ethernet_setup(void);   // Your Ethernet initialization code
+// And a global event group or similar mechanism used in ethernet_setup, if any.
+
+// Packet type definitions
+#define PACKET_TYPE_START 0xA0
+#define PACKET_TYPE_DATA  0xA1
+#define PACKET_TYPE_MID   0xA2
+#define PACKET_TYPE_END   0xA3
+
+#define PORT 8080
+static const char *TAG = "TCP_SOCKET";
+
+// FSM states
 typedef enum {
     FSM_WAIT_START,
-    FSM_WAIT_DATA,
-    FSM_WAIT_MID,
+    FSM_WAIT_DATA,    // After START received, before MID or END
+    FSM_WAIT_MID,     // After MID marker received (optional state; we simply mark that MID is reached)
     FSM_WAIT_END,
     FSM_COMPLETE,
     FSM_ERROR
 } fsm_state_t;
 
-#define PACKET_START_WRITE 0xA5  // Command to indicate start writing
-#define PACKET_DAT         0xA6  // Data packet
-#define PACKET_MID         0xA7  // Middle packet
-#define PACKET_END         0xA8  // Finish packet
-#define PACKET_FUC         0xF9  // Error condition
+// ################################################################
 
-// -----------------------------------------------------------------------------
-// Pin definitions (must match slave's settings)
-// -----------------------------------------------------------------------------
+// SPI pins (must match the slave configuration)
 #define PIN_NUM_MOSI  13
 #define PIN_NUM_MISO  12
-#define PIN_NUM_CLK   15
-#define PIN_NUM_CS    14
+#define PIN_NUM_CLK   14
+#define PIN_NUM_CS    15
 
-// -----------------------------------------------------------------------------
-// Transfer size and retry parameters (must match slave configuration)
-// -----------------------------------------------------------------------------
-#define MSG_BUF_SIZE  128
-#define MAX_RETRIES   5
+// Handshake pin number (slave drives this, master reads it)
+#define GPIO_HANDSHAKE 4
 
-// -----------------------------------------------------------------------------
-// SPI Master handle and host
-// -----------------------------------------------------------------------------
-static spi_device_handle_t spi_master_handle = NULL;
+// Transfer size: 2048 bytes.
+#define TRANSFER_SIZE 1024
+
+// Define two example command values (not used in the random payload).
+#define CMD_VALID   0xA6  
+#define CMD_INVALID 0xB1  
+
+// Maximum retry attempts.
+#define MAX_RETRY 5
+
+// We'll use HSPI_HOST for this example.
 #define SPI_HOST_TYPE HSPI_HOST
 
-static const char *TAG = "MASTER";
+static spi_device_handle_t spi_master_handle = NULL;
 
-// -----------------------------------------------------------------------------
-// Initialize the SPI master interface.
-// -----------------------------------------------------------------------------
 esp_err_t spi_master_init(void)
 {
     esp_err_t ret;
     spi_bus_config_t buscfg = {
-        .mosi_io_num = PIN_NUM_MOSI,  // 13
-        .miso_io_num = PIN_NUM_MISO,  // 12
-        .sclk_io_num = PIN_NUM_CLK,   // 14
+        .mosi_io_num = PIN_NUM_MOSI,
+        .miso_io_num = PIN_NUM_MISO,
+        .sclk_io_num = PIN_NUM_CLK,
         .quadwp_io_num = -1,
         .quadhd_io_num = -1,
-        .max_transfer_sz = MSG_BUF_SIZE,  // 128 bytes
+        .max_transfer_sz = TRANSFER_SIZE,
     };
 
     ret = spi_bus_initialize(SPI_HOST_TYPE, &buscfg, SPI_DMA_CH_AUTO);
@@ -132,15 +151,15 @@ esp_err_t spi_master_init(void)
     }
 
     spi_device_interface_config_t devcfg = {
-        .clock_speed_hz = 5000000,        // 5 MHz
-        .mode = 0,
-        .spics_io_num = PIN_NUM_CS,         // 15
-        .queue_size = 3,
         .command_bits = 0,
         .address_bits = 0,
         .dummy_bits = 0,
-        .duty_cycle_pos = 128,
-        .cs_ena_posttrans = 3,
+        .clock_speed_hz = 5000000,  // 5 MHz
+        .duty_cycle_pos = 128,      // 50% duty cycle
+        .mode = 0,
+        .spics_io_num = PIN_NUM_CS,
+        .cs_ena_posttrans = 3,      // Keep CS low a few extra cycles after transfer
+        .queue_size = 3
     };
 
     ret = spi_bus_add_device(SPI_HOST_TYPE, &devcfg, &spi_master_handle);
@@ -150,113 +169,339 @@ esp_err_t spi_master_init(void)
     return ret;
 }
 
-// -----------------------------------------------------------------------------
-// Send a command and wait for the slave to echo back the same command.
-// -----------------------------------------------------------------------------
-int SPI_send_confirm_command(uint8_t cmd, const uint8_t *data, size_t len)
+void handshake_init_master(void)
 {
-    // Allocate DMA-capable buffers.
-    uint8_t *tx_buffer = heap_caps_malloc(MSG_BUF_SIZE, MALLOC_CAP_DMA);
-    uint8_t *rx_buffer = heap_caps_malloc(MSG_BUF_SIZE, MALLOC_CAP_DMA);
-    if (!tx_buffer || !rx_buffer) {
-        ESP_LOGE(TAG, "Failed to allocate DMA buffers");
-        if (tx_buffer) free(tx_buffer);
-        if (rx_buffer) free(rx_buffer);
-        return 0;
+    // Configure handshake pin as input with pull-down.
+    gpio_config_t io_conf = {
+        .intr_type = GPIO_INTR_DISABLE,
+        .mode = GPIO_MODE_INPUT,
+        .pin_bit_mask = (1ULL << GPIO_HANDSHAKE),
+        .pull_down_en = GPIO_PULLDOWN_ENABLE,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+    };
+    gpio_config(&io_conf);
+}
+
+void wait_for_slave_ready(void)
+{
+    // Wait until the handshake pin goes high, indicating the slave is ready.
+    while(gpio_get_level(GPIO_HANDSHAKE) == 0) {
+        vTaskDelay(pdMS_TO_TICKS(2));
+    }
+}
+
+
+/**
+ * @brief Send a packet over SPI and verify that the slave echoes it correctly.
+ *
+ * This function builds a full TRANSFER_SIZE packet. The first byte is set to packet_type.
+ * If payload is provided (and payload_len > 0 and <= TRANSFER_SIZE-1), it is copied into the TX buffer.
+ * The remaining bytes are filled with random data.
+ *
+ * The function then performs two SPI transactions (send and echo read) with up to MAX_RETRY attempts.
+ *
+ * @param packet_type The command/packet type to send (placed in byte 0).
+ * @param payload Optional payload data (can be NULL).
+ * @param payload_len Length of payload data.
+ *
+ * @return 0 on success, -1 on failure.
+ */
+int spi_send_packet(uint8_t packet_type, uint8_t *payload, size_t payload_len)
+{
+    if (payload_len > (TRANSFER_SIZE - 1)) {
+        ESP_LOGE(TAG, "Payload too large: %d bytes (max %d)", payload_len, TRANSFER_SIZE - 1);
+        return -1;
     }
 
-    // Initialize buffers.
-    memset(tx_buffer, 0, MSG_BUF_SIZE);
-    memset(rx_buffer, 0, MSG_BUF_SIZE);
-    tx_buffer[0] = cmd;
-    if (data && len > 0 && (len < MSG_BUF_SIZE)) {
-        memcpy(&tx_buffer[1], data, len);
+    // Allocate buffers from the heap instead of the stack.
+    uint8_t *tx_buf = heap_caps_malloc(TRANSFER_SIZE, MALLOC_CAP_DMA);
+    uint8_t *rx_buf = heap_caps_malloc(TRANSFER_SIZE, MALLOC_CAP_DMA);
+    if (!tx_buf || !rx_buf) {
+        ESP_LOGE(TAG, "Heap allocation failed for SPI buffers");
+        if (tx_buf) free(tx_buf);
+        if (rx_buf) free(rx_buf);
+        return -1;
     }
 
-    int retry = 0;
+    // Build TX buffer: set first byte as packet_type.
+    tx_buf[0] = packet_type;
+    if (payload && payload_len > 0) {
+        memcpy(&tx_buf[1], payload, payload_len);
+    }
+    // Fill remaining bytes with random data.
+    for (int i = 1 + payload_len; i < TRANSFER_SIZE; i++) {
+        tx_buf[i] = (uint8_t)0;
+    }
+
+    int attempt;
     esp_err_t ret;
-    while (retry < MAX_RETRIES) {
-        // First transaction: send the command so the slave can update its state.
-        spi_transaction_t trans1;
-        memset(&trans1, 0, sizeof(trans1));
-        trans1.length = MSG_BUF_SIZE * 8;  // transfer length in bits
-        trans1.tx_buffer = tx_buffer;
-        trans1.rx_buffer = rx_buffer;
+    spi_transaction_t t = {0};
 
-        ret = spi_device_transmit(spi_master_handle, &trans1);
+    for (attempt = 0; attempt < MAX_RETRY; attempt++) {
+        wait_for_slave_ready();
+
+        // Transaction 1: Send the full TX buffer.
+        memset(&t, 0, sizeof(t));
+        t.length = TRANSFER_SIZE * 8;
+        t.tx_buffer = tx_buf;
+        t.rx_buffer = NULL;
+        ret = spi_device_polling_transmit(spi_master_handle, &t);
         if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "SPI transmit error on attempt %d (first transaction): %s",
-                     retry, esp_err_to_name(ret));
+            ESP_LOGE(TAG, "SPI transmit (send) failed on attempt %d: %s", attempt+1, esp_err_to_name(ret));
+            continue;
+        }
+        ESP_LOGI(TAG, "SPI send (attempt %d) successful", attempt+1);
+
+        // Transaction 2: Read echo from the slave.
+        memset(&t, 0, sizeof(t));
+        t.length = TRANSFER_SIZE * 8;
+        t.tx_buffer = tx_buf;  // Dummy TX data.
+        t.rx_buffer = rx_buf;
+        ret = spi_device_polling_transmit(spi_master_handle, &t);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "SPI echo read failed on attempt %d: %s", attempt+1, esp_err_to_name(ret));
+            continue;
         }
 
-        // Wait briefly to allow the slave to process the command.
-        vTaskDelay(pdMS_TO_TICKS(10));
-
-        // Second transaction: perform a confirmation transfer.
-        spi_transaction_t trans2;
-        memset(&trans2, 0, sizeof(trans2));
-        trans2.length = MSG_BUF_SIZE * 8;  // in bits
-        trans2.tx_buffer = tx_buffer;
-        trans2.rx_buffer = rx_buffer;
-
-        // Clear the RX buffer before the second transaction.
-        memset(rx_buffer, 0, MSG_BUF_SIZE);
-
-        ret = spi_device_transmit(spi_master_handle, &trans2);
-        if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "SPI transmit error on attempt %d (second transaction): %s",
-                     retry, esp_err_to_name(ret));
-        } else {
-            // Check if the slave echoed the expected header.
-            if (rx_buffer[0] == cmd) {
-                ESP_LOGI(TAG, "SPI confirm: Received expected header 0x%02X", rx_buffer[0]);
-                free(tx_buffer);
-                free(rx_buffer);
-                return 1;
-            } else {
-                ESP_LOGW(TAG, "SPI confirm invalid on attempt %d: Received 0x%02X, expected 0x%02X",
-                         retry, rx_buffer[0], cmd);
+        // Compare echoed data.
+        int mismatches = 0;
+        for (int i = 0; i < TRANSFER_SIZE; i++) {
+            if (rx_buf[i] != tx_buf[i]) {
+                mismatches++;
             }
         }
-        retry++;
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        if (mismatches == 0) {
+            ESP_LOGI(TAG, "\033[0;32mSPI packet echo verified on attempt %d.\033[0m", attempt+1);
+            free(tx_buf);
+            free(rx_buf);
+            return 0;
+        } else {
+            ESP_LOGW(TAG, "Attempt %d: %d mismatches in echoed data.", attempt+1, mismatches);
+            vTaskDelay(pdMS_TO_TICKS(10));
+        }
+    }
+    ESP_LOGE(TAG, "SPI packet echo failed after %d attempts.", MAX_RETRY);
+    free(tx_buf);
+    free(rx_buf);
+    return -1;
+}
+
+
+int spi_send_packet_clear()
+{
+    uint8_t *tx_buf = heap_caps_malloc(TRANSFER_SIZE, MALLOC_CAP_DMA);
+    uint8_t *rx_buf = heap_caps_malloc(TRANSFER_SIZE, MALLOC_CAP_DMA);
+    if (!tx_buf || !rx_buf) {
+        ESP_LOGE(TAG, "Heap allocation failed for SPI buffers");
+        if (tx_buf) free(tx_buf);
+        if (rx_buf) free(rx_buf);
+        return -1;
     }
 
-    free(tx_buffer);
-    free(rx_buffer);
+    for (int i = 0; i < TRANSFER_SIZE; i++) {
+        tx_buf[i] = 0;
+    }
+
+    spi_transaction_t t = {0};
+    esp_err_t ret;
+    int attempt;
+    attempt = -1; 
+
+    wait_for_slave_ready();
+
+    // Single transaction: send tx_buf and receive rx_buf.
+    memset(&t, 0, sizeof(t));
+    t.length = TRANSFER_SIZE * 8;  // in bits.
+    t.tx_buffer = tx_buf;
+    t.rx_buffer = rx_buf;
+
+    ret = spi_device_polling_transmit(spi_master_handle, &t);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "SPI transaction failed on attempt %d: %s", attempt+1, esp_err_to_name(ret));
+        return -1; 
+    }
+    ESP_LOGI(TAG, "CLEARING: Echoed data: 0x%02X 0x%02X 0x%02X ...", rx_buf[0], rx_buf[1], rx_buf[2]);
+
+    free(tx_buf);
+    free(rx_buf);
     return 0;
 }
 
-// -----------------------------------------------------------------------------
-// Send a command without expecting any confirmation.
-// -----------------------------------------------------------------------------
-int SPI_send_command_no_confirm(uint8_t cmd, const uint8_t *data, size_t len)
+int spi_send_packet_v2(uint8_t packet_type, uint8_t previous_packet_type, uint8_t *payload, size_t payload_len)
 {
-    uint8_t *tx_buffer = heap_caps_malloc(MSG_BUF_SIZE, MALLOC_CAP_DMA);
-    if (!tx_buffer) {
-        ESP_LOGE(TAG, "Failed to allocate TX buffer");
-        return 0;
-    }
-    memset(tx_buffer, 0, MSG_BUF_SIZE);
-    tx_buffer[0] = cmd;
-    if (data && len > 0 && (len < MSG_BUF_SIZE)) {
-        memcpy(&tx_buffer[1], data, len);
+    if (payload_len > (TRANSFER_SIZE - 1)) {
+        ESP_LOGE(TAG, "Payload too large: %d bytes (max %d)", payload_len, TRANSFER_SIZE - 1);
+        return -1;
     }
 
-    spi_transaction_t t;
+    // Allocate TX and RX buffers from heap (DMA-capable if needed).
+    uint8_t *tx_buf = heap_caps_malloc(TRANSFER_SIZE, MALLOC_CAP_DMA);
+    uint8_t *rx_buf = heap_caps_malloc(TRANSFER_SIZE, MALLOC_CAP_DMA);
+    if (!tx_buf || !rx_buf) {
+        ESP_LOGE(TAG, "Heap allocation failed for SPI buffers");
+        if (tx_buf) free(tx_buf);
+        if (rx_buf) free(rx_buf);
+        return -1;
+    }
+
+    // Build the TX buffer.
+    tx_buf[0] = packet_type;
+    if (payload && payload_len > 0) {
+        memcpy(&tx_buf[1], payload, payload_len);
+    }
+    for (int i = 1 + payload_len; i < TRANSFER_SIZE; i++) {
+        tx_buf[i] = (uint8_t) esp_random();
+    }
+
+    spi_transaction_t t = {0};
+    esp_err_t ret;
+    int attempt;
+    attempt = -1; 
+
+    wait_for_slave_ready();
+
+    // Single transaction: send tx_buf and receive rx_buf.
     memset(&t, 0, sizeof(t));
-    t.length = MSG_BUF_SIZE * 8;
-    t.tx_buffer = tx_buffer;  // Use the allocated buffer directly
-    t.rx_buffer = NULL;       // No RX buffer needed
+    t.length = TRANSFER_SIZE * 8;  // in bits.
+    t.tx_buffer = tx_buf;
+    t.rx_buffer = rx_buf;
 
-    esp_err_t ret = spi_device_transmit(spi_master_handle, &t);
-    free(tx_buffer);
+    ESP_LOGI(TAG, "Sending data: 0x%02X 0x%02X 0x%02X ...", tx_buf[0], tx_buf[1], tx_buf[2]);
+
+    ret = spi_device_polling_transmit(spi_master_handle, &t);
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "SPI transmit (no confirm) error: %s", esp_err_to_name(ret));
-        return 0;
+        ESP_LOGE(TAG, "SPI transaction failed on attempt %d: %s", attempt+1, esp_err_to_name(ret));
+        return -1; 
     }
-    return 1;
+    ESP_LOGI(TAG, "Echoed data: 0x%02X 0x%02X 0x%02X ...", rx_buf[0], rx_buf[1], rx_buf[2]);
+
+    if (previous_packet_type != 0 && rx_buf[0] != previous_packet_type) {
+        ESP_LOGE(TAG, "SPI echo mismatch on attempt %d: expected 0x%02X, got 0x%02X", 
+                    attempt+1, previous_packet_type, rx_buf[0]);
+        vTaskDelay(pdMS_TO_TICKS(10));
+        return -1; 
+    }
+
+    ESP_LOGI(TAG, "\033[0;32mSPI packet (0x%02X) verified on attempt %d.\033[0m", previous_packet_type, attempt+1);
+    
+    free(tx_buf);
+    free(rx_buf);
+    return 0;
 }
+
+void build_tx_buffer(uint8_t *buf, uint8_t *pl, uint8_t packet_type, size_t pl_len) {
+    buf[0] = packet_type;
+    if (pl && pl_len > 0) {
+        memcpy(&buf[1], pl, pl_len);
+    }
+    for (int i = 1 + pl_len; i < TRANSFER_SIZE; i++) {
+        buf[i] = (uint8_t) esp_random();
+    }
+}
+
+int spi_send_packet_v3(uint8_t packet_type,
+                       uint8_t previous_packet_type,
+                       uint8_t *payload, size_t payload_len,
+                       uint8_t *backup_payload, size_t backup_payload_len)
+{
+    if (payload_len > (TRANSFER_SIZE - 1)) {
+        ESP_LOGE(TAG, "Payload too large: %d bytes (max %d)", payload_len, TRANSFER_SIZE - 1);
+        return -1;
+    }
+    // Only check backup length if a backup payload is provided (nonzero length).
+    if (payload && backup_payload_len != 0 && (backup_payload_len < payload_len)) {
+        ESP_LOGE(TAG, "Backup payload length (%d) is less than payload length (%d)", backup_payload_len, payload_len);
+        return -1;
+    }
+
+    // Allocate TX and RX buffers from the heap (DMA-capable if needed).
+    uint8_t *tx_buf = heap_caps_malloc(TRANSFER_SIZE, MALLOC_CAP_DMA);
+    uint8_t *rx_buf = heap_caps_malloc(TRANSFER_SIZE, MALLOC_CAP_DMA);
+    if (!tx_buf || !rx_buf) {
+        ESP_LOGE(TAG, "Heap allocation failed for SPI buffers");
+        if (tx_buf) free(tx_buf);
+        if (rx_buf) free(rx_buf);
+        return -1;
+    }
+
+    spi_transaction_t t = {0};
+    esp_err_t ret;
+
+    // --- Attempt 1: Send current payload ---
+    build_tx_buffer(tx_buf, payload, packet_type, payload_len);
+    wait_for_slave_ready();
+    memset(&t, 0, sizeof(t));
+    t.length = TRANSFER_SIZE * 8;
+    t.tx_buffer = tx_buf;
+    t.rx_buffer = rx_buf;
+
+    ESP_LOGI(TAG, "Sending packet 0x%02X (current payload)", packet_type);
+    ret = spi_device_polling_transmit(spi_master_handle, &t);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "SPI transaction failed on current payload attempt: %s", esp_err_to_name(ret));
+        free(tx_buf); free(rx_buf);
+        return -1;
+    }
+    ESP_LOGI(TAG, "Echoed data: 0x%02X 0x%02X 0x%02X ...", rx_buf[0], rx_buf[1], rx_buf[2]);
+
+    // If previous_packet_type is nonzero, then we check:
+    // - Always verify rx_buf[0] matches previous_packet_type.
+    // - Verify the payload if backup_payload_len is nonzero.
+    if (previous_packet_type != 0) {
+        if (rx_buf[0] != previous_packet_type ||
+            (payload_len > 0 && backup_payload_len > 0 &&
+             memcmp(&rx_buf[1], backup_payload, payload_len) != 0)) {
+            ESP_LOGE(TAG, "SPI echo mismatch on current payload: expected cmd 0x%02X, got 0x%02X", 
+                     previous_packet_type, rx_buf[0]);
+            ESP_LOGI(TAG, "Echoed data: 0x%02X 0x%02X 0x%02X ...", rx_buf[0], rx_buf[1], rx_buf[2]);
+            // Now try resending the backup payload up to MAX_RETRY times.
+            int attempt;
+            for (attempt = 0; attempt < MAX_RETRY; attempt++) {
+                build_tx_buffer(tx_buf, backup_payload, previous_packet_type, payload_len);
+                wait_for_slave_ready();
+                memset(&t, 0, sizeof(t));
+                t.length = TRANSFER_SIZE * 8;
+                t.tx_buffer = tx_buf;
+                t.rx_buffer = rx_buf;
+
+                ESP_LOGI(TAG, "Retrying backup payload attempt %d for packet 0x%02X", attempt+1, packet_type);
+                ret = spi_device_polling_transmit(spi_master_handle, &t);
+                if (ret != ESP_OK) {
+                    ESP_LOGE(TAG, "SPI transaction failed on backup payload attempt %d: %s", attempt+1, esp_err_to_name(ret));
+                    vTaskDelay(pdMS_TO_TICKS(10));
+                    continue;
+                }
+                if (rx_buf[0] == previous_packet_type &&
+                    (payload_len == 0 || 
+                     (backup_payload_len > 0 && memcmp(&rx_buf[1], backup_payload, payload_len) == 0))) {
+                    ESP_LOGI(TAG, "\033[0;32mBackup payload verified on attempt %d.\033[0m", attempt+1);
+                    // Update backup_payload with current payload for future use.
+                    if (payload && payload_len > 0) {
+                        memcpy(backup_payload, payload, payload_len);
+                    }
+                    free(tx_buf); free(rx_buf);
+                    return 0;
+                } else {
+                    ESP_LOGE(TAG, "Backup payload echo mismatch on attempt %d: expected 0x%02X", attempt+1, previous_packet_type);
+                    ESP_LOGI(TAG, "Echoed data: 0x%02X 0x%02X 0x%02X ...", rx_buf[0], rx_buf[1], rx_buf[2]);
+                    vTaskDelay(pdMS_TO_TICKS(10));
+                }
+            }
+            ESP_LOGE(TAG, "Backup payload failed after %d attempts.", MAX_RETRY);
+            free(tx_buf); free(rx_buf);
+            return -1;
+        }
+    }
+    ESP_LOGI(TAG, "\033[0;32mSPI packet 0x%02X verified on current payload.\033[0m", packet_type);
+    
+    free(tx_buf);
+    free(rx_buf);
+    return 0;
+}
+
+
+
+// ################################################################
 
 
 static int recv_all(int sock, void *buffer, size_t len) {
@@ -272,7 +517,6 @@ static int recv_all(int sock, void *buffer, size_t len) {
     return 0;
 }
 
-    
 static void tcp_server_task(void *pvParameters)
 {
     char addr_str[128];
@@ -317,12 +561,15 @@ static void tcp_server_task(void *pvParameters)
         return;
     }
 
+
     while (1) {
         ESP_LOGI(TAG, "Socket listening");
 
         struct sockaddr_storage source_addr;
         socklen_t addr_len = sizeof(source_addr);
         ESP_LOGI(TAG, "Waiting for a connection...");
+
+        
 
         // Accept incoming connection (blocking call)
         int sock = accept(listen_sock, (struct sockaddr *)&source_addr, &addr_len);
@@ -347,16 +594,30 @@ static void tcp_server_task(void *pvParameters)
         unsigned int computed_checksum = 0;
         unsigned int expected_total_data = 0;
         unsigned int received_data = 0;
+        uint8_t previous_spi_packet = 0; // For the very first transaction, no previous packet is expected.
+        uint16_t previous_spi_paacket_len = 0; 
+        uint8_t *previous_data_chunk = NULL; 
+
+        uint8_t *tx_buf = heap_caps_malloc(TRANSFER_SIZE, MALLOC_CAP_DMA);
+        uint8_t *rx_buf = heap_caps_malloc(TRANSFER_SIZE, MALLOC_CAP_DMA);
+        if (!tx_buf || !rx_buf) {
+            ESP_LOGE(TAG, "Heap allocation failed for SPI buffers");
+            if (tx_buf) free(tx_buf);
+            if (rx_buf) free(rx_buf);
+            return -1;
+        }
+        memset(tx_buf, 0, TRANSFER_SIZE);
+        memset(rx_buf, 0, TRANSFER_SIZE);
+
+        uint8_t *data_chunk; 
 
         while (state != FSM_COMPLETE && state != FSM_ERROR) {
             uint8_t pkt_type;
-            // Read the packet type (1 byte)
             if (recv_all(sock, &pkt_type, 1) != 0) {
                 ESP_LOGE(TAG, "Failed to read packet type");
                 state = FSM_ERROR;
                 break;
             }
-            // Process each packet type.
             switch(pkt_type) {
                 case PACKET_TYPE_START:
                 {
@@ -365,7 +626,6 @@ static void tcp_server_task(void *pvParameters)
                         state = FSM_ERROR;
                         break;
                     }
-                    // START packet: next 8 bytes: width (2), height (2), total data length (4)
                     uint8_t buffer[8];
                     if (recv_all(sock, buffer, sizeof(buffer)) != 0) {
                         ESP_LOGE(TAG, "Failed to read START packet payload");
@@ -380,14 +640,20 @@ static void tcp_server_task(void *pvParameters)
                     expected_total_data = total_len;
                     ESP_LOGI(TAG, "START: Image dimensions: %dx%d, total data: %u bytes", width, height, total_len);
 
-                    // Send SPI command for START via confirmation function.
-                    if (!SPI_send_confirm_command(PACKET_START_WRITE, NULL, 0)) {
-                        ESP_LOGE(TAG, "SPI START command failed");
+                    if (spi_send_packet_v2(PACKET_TYPE_START, previous_spi_packet, NULL, 0) != 0) {
+                        ESP_LOGE(TAG, "SPI START packet verification failed.");
                         state = FSM_ERROR;
                         break;
                     }
+                    // if (spi_send_packet_v3(PACKET_TYPE_START, previous_spi_packet,
+                    //                         NULL, 0, NULL, 0) != 0) {
+                    //     ESP_LOGE(TAG, "SPI DATA packet verification failed.");
+                    //     free(data_chunk);
+                    //     state = FSM_ERROR;
+                    //     break;
+                    // }
+                    previous_spi_packet = PACKET_TYPE_START;
 
-                    // Send ACK for START (send one byte same as packet type)
                     if (send(sock, &pkt_type, 1, 0) < 0) {
                         ESP_LOGE(TAG, "Failed to send START ACK");
                         state = FSM_ERROR;
@@ -398,6 +664,7 @@ static void tcp_server_task(void *pvParameters)
                 }
                 case PACKET_TYPE_DATA:
                 {
+                    ESP_LOGI(TAG, "In PACKET_TYPE_DATA");
                     // DATA packet: next 2 bytes: data length, then payload
                     uint8_t len_buf[2];
                     if (recv_all(sock, len_buf, sizeof(len_buf)) != 0) {
@@ -407,7 +674,7 @@ static void tcp_server_task(void *pvParameters)
                     }
                     uint16_t data_len = (len_buf[0] << 8) | len_buf[1];
                     if (data_len > 0) {
-                        uint8_t *data_chunk = malloc(data_len);
+                        data_chunk = malloc(data_len);
                         if (!data_chunk) {
                             ESP_LOGE(TAG, "Memory allocation failed");
                             state = FSM_ERROR;
@@ -419,16 +686,28 @@ static void tcp_server_task(void *pvParameters)
                             state = FSM_ERROR;
                             break;
                         }
-                        // Update computed checksum
-                        for (int i = 0; i < data_len; i++) {
-                            computed_checksum += data_chunk[i];
-                        }
-                        // Forward the received DATA packet to the SPI slave (no confirmation).
-                        if (!SPI_send_command_no_confirm(PACKET_TYPE_DATA, data_chunk, data_len)) {
-                            ESP_LOGE(TAG, "SPI DATA transmission failed");
+                        ESP_LOGI(TAG, "IN PACKET_TYPE_DATA, data_len: %d", data_len);
+
+
+                        if (spi_send_packet_v2(PACKET_TYPE_DATA, previous_spi_packet, data_chunk, data_len) != 0) {
+                            ESP_LOGE(TAG, "SPI DATA packet verification failed.");
                             free(data_chunk);
                             state = FSM_ERROR;
                             break;
+                        }
+                        // if (spi_send_packet_v3(PACKET_TYPE_DATA, previous_spi_packet,
+                        //                         data_chunk, data_len, previous_data_chunk, previous_spi_paacket_len) != 0) {
+                        //     ESP_LOGE(TAG, "SPI DATA packet verification failed.");
+                        //     free(data_chunk);
+                        //     state = FSM_ERROR;
+                        //     break;
+                        // }
+                        previous_spi_packet = PACKET_TYPE_DATA;
+                        previous_data_chunk = data_chunk;
+                        previous_spi_paacket_len = data_len;
+
+                        for (int i = 0; i < data_len; i++) {
+                            computed_checksum += data_chunk[i];
                         }
                         received_data += data_len;
                         free(data_chunk);
@@ -445,16 +724,25 @@ static void tcp_server_task(void *pvParameters)
                         break;
                     }
                     ESP_LOGI(TAG, "MID packet received (halfway marker). Total received so far: %u bytes", received_data);
-                    
-                    // Send TCP ACK for MID.
-                    if (send(sock, &pkt_type, 1, 0) < 0) {
-                        ESP_LOGE(TAG, "Failed to send MID ACK");
+
+                    if (spi_send_packet_v2(PACKET_TYPE_MID, previous_spi_packet, NULL, 0) != 0) {
+                        ESP_LOGE(TAG, "SPI MID packet verification failed.");
                         state = FSM_ERROR;
                         break;
                     }
-                    // Send SPI command for MID confirmation.
-                    if (!SPI_send_confirm_command(PACKET_MID, NULL, 0)) {
-                        ESP_LOGE(TAG, "SPI MID command failed");
+                    // if (spi_send_packet_v3(PACKET_TYPE_MID, previous_spi_packet,
+                    //                         NULL, 0, previous_data_chunk, previous_spi_paacket_len) != 0) {
+                    //     ESP_LOGE(TAG, "SPI MID packet verification failed.");
+                    //     free(previous_data_chunk);
+                    //     state = FSM_ERROR;
+                    //     break;
+                    // }
+                    previous_spi_packet = PACKET_TYPE_MID;
+                    previous_data_chunk = NULL;
+                    previous_spi_paacket_len = 0;
+
+                    if (send(sock, &pkt_type, 1, 0) < 0) {
+                        ESP_LOGE(TAG, "Failed to send MID ACK");
                         state = FSM_ERROR;
                         break;
                     }
@@ -463,7 +751,6 @@ static void tcp_server_task(void *pvParameters)
                 }
                 case PACKET_TYPE_END:
                 {
-                    // END packet: next 4 bytes: checksum
                     uint8_t end_buf[4];
                     if (recv_all(sock, end_buf, sizeof(end_buf)) != 0) {
                         ESP_LOGE(TAG, "Failed to read END packet payload");
@@ -476,21 +763,29 @@ static void tcp_server_task(void *pvParameters)
                         ESP_LOGE(TAG, "Checksum mismatch!");
                         state = FSM_ERROR;
                     } else {
-                        vTaskDelay(100 / portTICK_PERIOD_MS);
-                        // Send SPI command for END confirmation.
-                        if (!SPI_send_confirm_command(PACKET_END, NULL, 0)) {
-                            ESP_LOGE(TAG, "SPI END command failed");
+                        vTaskDelay(100 / portTICK_PERIOD_MS);  
+                        pkt_type = PACKET_TYPE_END; 
+    
+                        if (spi_send_packet_v2(PACKET_TYPE_END, previous_spi_packet, NULL, 0) != 0) {
+                            ESP_LOGE(TAG, "SPI END packet verification failed.");
                             state = FSM_ERROR;
                             break;
                         }
-                        // Send TCP ACK for END.
-                        pkt_type = PACKET_TYPE_END;
-                        if (send(sock, &pkt_type, 1, 0) < 0) {
+                        // if (spi_send_packet_v3(PACKET_TYPE_END, previous_spi_packet,
+                        //                         NULL, 0, NULL, 0) != 0) {
+                        //     ESP_LOGE(TAG, "END packet verification failed.");
+                        //     state = FSM_ERROR;
+                        //     break;
+                        // }
+                        previous_spi_packet = PACKET_TYPE_END;
+
+                        if (send(sock, &pkt_type, 1, 0) < 0)
+                        {
                             ESP_LOGE(TAG, "Failed to send END ACK");
                             state = FSM_ERROR;
                             break;
                         }
-                        vTaskDelay(100 / portTICK_PERIOD_MS);
+                        vTaskDelay(100 / portTICK_PERIOD_MS);  
                         state = FSM_COMPLETE;
                     }
                     break;
@@ -499,12 +794,15 @@ static void tcp_server_task(void *pvParameters)
                     ESP_LOGE(TAG, "Unknown packet type received: 0x%02X", pkt_type);
                     state = FSM_ERROR;
                     break;
-            } // end switch
-        } // end while FSM
+            } 
+        } 
 
         if (state == FSM_COMPLETE) {
             ESP_LOGI(TAG, "Image transfer complete. Total data received: %u bytes", received_data);
         } else {
+            previous_spi_packet = 0;
+            spi_send_packet_clear(); 
+            spi_send_packet_clear(); 
             ESP_LOGE(TAG, "Image transfer error occurred.");
         }
 
@@ -517,7 +815,7 @@ static void tcp_server_task(void *pvParameters)
 }
 
 
-
+/** Event handler for Ethernet events */
 static void eth_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
     uint8_t mac_addr[6] = {0};
@@ -553,6 +851,7 @@ static void eth_event_handler(void *arg, esp_event_base_t event_base, int32_t ev
     }
 }
 
+/** Event handler for IP_EVENT_ETH_GOT_IP */
 static void got_ip_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
     ip_event_got_ip_t *event = (ip_event_got_ip_t *) event_data;
@@ -687,15 +986,15 @@ void app_main(void)
     ethernet_setup();
     vTaskDelay(2000 / portTICK_PERIOD_MS);
     ESP_LOGI(ETH_TAG, "Ethernet Initialized!");
-
-    ESP_LOGI(TAG, "Master starting...");
-    if (spi_master_init() != ESP_OK) {
+    xTaskCreate(tcp_server_task, "tcp_server", 4096, NULL, 5, NULL);
+    ESP_LOGI(ETH_TAG, "Started TCP server task");
+    esp_err_t ret = spi_master_init();
+    if (ret != ESP_OK) {
         ESP_LOGE(TAG, "SPI master initialization failed");
         return;
     }
-    ESP_LOGI(ETH_TAG, "Started SPI Master");
+    handshake_init_master();
+    ESP_LOGI(TAG, "SPI master initialized");
 
-    xTaskCreate(tcp_server_task, "tcp_server", 4096, NULL, 5, NULL);
-    ESP_LOGI(ETH_TAG, "Started TCP server task");
 
 }
