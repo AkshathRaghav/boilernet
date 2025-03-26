@@ -481,7 +481,7 @@ static void tcp_server_task(void *pvParameters)
                     ESP_LOGI(COMM_TAG, "START: Image dimensions: %dx%d, total data: %u bytes", width, height, total_len);
 
                     tx_buf[0] = PACKET_TYPE_START;
-                    tx_buf[1] = 1; 
+                    tx_buf[1] = 1;
                     if (spi_send_packet(t, tx_buf, rx_buf, NULL) != 0)
                     {
                         ESP_LOGE(COMM_TAG, "SPI START packet verification failed.");
@@ -511,7 +511,7 @@ static void tcp_server_task(void *pvParameters)
                     
                     if (data_len == 0) break;
 
-                    if (recv_all(sock, tx_buf + 2, data_len) != 0)
+                    if (recv_all(sock, tx_buf + 3, data_len) != 0)
                     {
                         ESP_LOGE(COMM_TAG, "Failed to read DATA payload");
                         state = FSM_ERROR;
@@ -520,6 +520,7 @@ static void tcp_server_task(void *pvParameters)
                     ESP_LOGI(COMM_TAG, "IN PACKET_TYPE_DATA, data_len: %d", data_len);
 
                     tx_buf[0] = PACKET_TYPE_DATA; 
+                    tx_buf[2] = crc8(tx_buf, TRANSFER_SIZE, 3); 
                     if (spi_send_packet(t, tx_buf, rx_buf, expected_rx_buf) != 0) {
                         ESP_LOGE(COMM_TAG, "SPI DATA packet verification failed.");
                         state = FSM_ERROR;
@@ -527,9 +528,9 @@ static void tcp_server_task(void *pvParameters)
                     }
                     expected_rx_buf[0] = PACKET_TYPE_DATA;
                     expected_rx_buf[1] = tx_buf[1];
-                    memcpy(expected_rx_buf + 2, tx_buf + 2, TRANSFER_SIZE - 2);
+                    memcpy(expected_rx_buf + 3, tx_buf + 3, TRANSFER_SIZE - 3);
 
-                    for (int i = 2; i < data_len + 2; i++) {
+                    for (int i = 3; i < data_len + 3; i++) {
                         computed_checksum += tx_buf[i];
                     }
                     received_data += data_len;
