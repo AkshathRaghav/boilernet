@@ -7,30 +7,39 @@
 #include "esp_log.h"
 #include "esp_err.h"
 
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include "esp_log.h"
+#include "esp_err.h"
+#include "driver/spi_slave.h"
+#include "driver/spi_master.h"
+#include "esp_vfs_fat.h"
+#include "sdmmc_cmd.h"
+#include "driver/sdspi_host.h"
+
+
 
 // ##############################################################################
 
 static const char *COMM_TAG = "SPI_SLAVE";
 
-#define RCV_HOST    HSPI_HOST
+#define RCV_HOST    VSPI_HOST
 
-#define GPIO_MOSI     13
-#define GPIO_MISO     12
-#define GPIO_SCLK     14
-#define GPIO_CS       15
+#define GPIO_MOSI     23
+#define GPIO_MISO     19
+#define GPIO_SCLK     18
+#define GPIO_CS       5
 
-// Handshake pin number (slave drives this)
 #define GPIO_HANDSHAKE 4
 
 #define TRANSFER_SIZE 2048
 
-// Post-setup callback: Called after the transaction is queued.
 void my_post_setup_cb(spi_slave_transaction_t *trans)
 {
     gpio_set_level(GPIO_HANDSHAKE, 1);
 }
 
-// Post-transaction callback: Called after the transaction is completed.
 void my_post_trans_cb(spi_slave_transaction_t *trans)
 {
     gpio_set_level(GPIO_HANDSHAKE, 0);
@@ -49,58 +58,12 @@ void handshake_init_slave(void)
     gpio_config(&io_conf);
 }
 
-// ##############################################################################
-
-static const uint8_t crc8_table[256] = {
-    0x00, 0x07, 0x0E, 0x09, 0x1C, 0x1B, 0x12, 0x15,
-    0x38, 0x3F, 0x36, 0x31, 0x24, 0x23, 0x2A, 0x2D,
-    0x70, 0x77, 0x7E, 0x79, 0x6C, 0x6B, 0x62, 0x65,
-    0x48, 0x4F, 0x46, 0x41, 0x54, 0x53, 0x5A, 0x5D,
-    0xE0, 0xE7, 0xEE, 0xE9, 0xFC, 0xFB, 0xF2, 0xF5,
-    0xD8, 0xDF, 0xD6, 0xD1, 0xC4, 0xC3, 0xCA, 0xCD,
-    0x90, 0x97, 0x9E, 0x99, 0x8C, 0x8B, 0x82, 0x85,
-    0xA8, 0xAF, 0xA6, 0xA1, 0xB4, 0xB3, 0xBA, 0xBD,
-    0xC7, 0xC0, 0xC9, 0xCE, 0xDB, 0xDC, 0xD5, 0xD2,
-    0xFF, 0xF8, 0xF1, 0xF6, 0xE3, 0xE4, 0xED, 0xEA,
-    0xB7, 0xB0, 0xB9, 0xBE, 0xAB, 0xAC, 0xA5, 0xA2,
-    0x8F, 0x88, 0x81, 0x86, 0x93, 0x94, 0x9D, 0x9A,
-    0x27, 0x20, 0x29, 0x2E, 0x3B, 0x3C, 0x35, 0x32,
-    0x1F, 0x18, 0x11, 0x16, 0x03, 0x04, 0x0D, 0x0A,
-    0x57, 0x50, 0x59, 0x5E, 0x4B, 0x4C, 0x45, 0x42,
-    0x6F, 0x68, 0x61, 0x66, 0x73, 0x74, 0x7D, 0x7A,
-    0x89, 0x8E, 0x87, 0x80, 0x95, 0x92, 0x9B, 0x9C,
-    0xB1, 0xB6, 0xBF, 0xB8, 0xAD, 0xAA, 0xA3, 0xA4,
-    0xF9, 0xFE, 0xF7, 0xF0, 0xE5, 0xE2, 0xEB, 0xEC,
-    0xC1, 0xC6, 0xCF, 0xC8, 0xDD, 0xDA, 0xD3, 0xD4,
-    0x69, 0x6E, 0x67, 0x60, 0x75, 0x72, 0x7B, 0x7C,
-    0x51, 0x56, 0x5F, 0x58, 0x4D, 0x4A, 0x43, 0x44,
-    0x19, 0x1E, 0x17, 0x10, 0x05, 0x02, 0x0B, 0x0C,
-    0x21, 0x26, 0x2F, 0x28, 0x3D, 0x3A, 0x33, 0x34,
-    0x4E, 0x49, 0x40, 0x47, 0x52, 0x55, 0x5C, 0x5B,
-    0x76, 0x71, 0x78, 0x7F, 0x6A, 0x6D, 0x64, 0x63,
-    0x3E, 0x39, 0x30, 0x37, 0x22, 0x25, 0x2C, 0x2B,
-    0x06, 0x01, 0x08, 0x0F, 0x1A, 0x1D, 0x14, 0x13,
-    0xAE, 0xA9, 0xA0, 0xA7, 0xB2, 0xB5, 0xBC, 0xBB,
-    0x96, 0x91, 0x98, 0x9F, 0x8A, 0x8D, 0x84, 0x83
-};
-
-uint8_t crc8(uint8_t *data, size_t length, uint8_t offset) {
-    uint8_t crc = 0x00; // Initial value; change if your variant requires a different start.
-    for (size_t i = offset; i < length - offset; i++) {
-        crc = crc8_table[crc ^ data[i]];
-    }
-    return crc;
-}
-
-// ##############################################################################
-
 static esp_err_t spi_slave_init(void)
 {
     esp_err_t ret;
 
     handshake_init_slave();
 
-    // Configure SPI bus.
     spi_bus_config_t buscfg = {
         .mosi_io_num = GPIO_MOSI,
         .miso_io_num = GPIO_MISO,
@@ -110,7 +73,6 @@ static esp_err_t spi_slave_init(void)
         .max_transfer_sz = TRANSFER_SIZE,
     };
 
-    // Configure SPI slave interface.
     spi_slave_interface_config_t slvcfg = {
         .mode = 0,
         .spics_io_num = GPIO_CS,
@@ -129,10 +91,100 @@ static esp_err_t spi_slave_init(void)
     return ret; 
 }
 
+
+// ##############################################################################
+
+#define MOUNT_POINT "/sdcard"
+
+#define RCV_HOST2 HSPI_HOST   
+
+#define PACKET_TYPE_START 0xA0
+#define PACKET_TYPE_DATA  0xA1
+#define PACKET_TYPE_MID   0xA2
+#define PACKET_TYPE_END   0xA3
+#define PACKET_TYPE_FUC   0xA4
+
+#define PIN_NUM_MISO  12
+#define PIN_NUM_MOSI  13
+#define PIN_NUM_CLK   14
+#define PIN_NUM_CS    15
+
+typedef enum {
+    FSM_WAIT_START,
+    FSM_WAIT_DATA,
+    FSM_COMPLETE,
+    FSM_ERROR
+} fsm_state_t;
+
+
+static esp_err_t SDCardInit(void) {
+    esp_vfs_fat_sdmmc_mount_config_t mount_config = {
+        .format_if_mount_failed = true,
+        .max_files = 5,
+        .allocation_unit_size = 16 * 1024
+    };
+
+    sdmmc_card_t *card;
+    const char mount_point[] = MOUNT_POINT;
+    sdmmc_host_t host = SDSPI_HOST_DEFAULT();
+
+    spi_bus_config_t bus_cfg = {
+        .mosi_io_num = PIN_NUM_MOSI,
+        .miso_io_num = PIN_NUM_MISO,
+        .sclk_io_num = PIN_NUM_CLK,
+        .quadwp_io_num = -1,
+        .quadhd_io_num = -1,
+        .max_transfer_sz = 2048,
+    };
+
+    host.max_freq_khz = 5200;
+    int ret = spi_bus_initialize(host.slot, &bus_cfg, SDSPI_DEFAULT_DMA);
+    if (ret != ESP_OK) {
+        ESP_LOGE("SDCARD", "Failed to initialize SPI bus for SD card: %s", esp_err_to_name(ret));
+        return ret;
+    }
+
+    sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
+    slot_config.gpio_cs = PIN_NUM_CS;
+    slot_config.host_id = host.slot;
+
+    ret = esp_vfs_fat_sdspi_mount(mount_point, &host, &slot_config, &mount_config, &card);
+    if (ret != ESP_OK) {
+        ESP_LOGE("SDCARD", "Failed to mount SD card: %s", esp_err_to_name(ret));
+        return ret;
+    }
+
+    ESP_LOGI("SDCARD", "SD Card mounted at: %s", MOUNT_POINT);
+    return ESP_OK;
+}
+
+static FILE *sdcard_open(const char *filename, const char *mode) {
+    char path[128];
+    snprintf(path, sizeof(path), "%s/%s", MOUNT_POINT, filename);
+    return fopen(path, mode);
+}
+
+static size_t sdcard_write(FILE *file, const void *buffer, size_t size) {
+    return fwrite(buffer, 1, size, file);
+}
+
+static void sdcard_close(FILE *file) {
+    fclose(file);
+}
+
+static void sdcard_delete(const char *filename) {
+    char path[128];
+    snprintf(path, sizeof(path), "%s/%s", MOUNT_POINT, filename);
+    remove(path);
+}
+
+// ##############################################################################
+
 static void spi_handler_task(void *pvParameters) { 
     uint8_t *rx_buf_parent = spi_bus_dma_memory_alloc(RCV_HOST, TRANSFER_SIZE, 0);
     uint8_t *rx_buf = spi_bus_dma_memory_alloc(RCV_HOST, TRANSFER_SIZE, 0);
     uint8_t *tx_buf = spi_bus_dma_memory_alloc(RCV_HOST, TRANSFER_SIZE, 0);
+
     if (!rx_buf || !tx_buf) {
         ESP_LOGE(COMM_TAG, "Failed to allocate DMA buffers");
         return;
@@ -140,9 +192,14 @@ static void spi_handler_task(void *pvParameters) {
     memset(tx_buf, 0, TRANSFER_SIZE);
     memset(rx_buf_parent, 0, TRANSFER_SIZE);
     
+    fsm_state_t fsm_state = FSM_WAIT_START;
+    unsigned int computed_checksum = 0;
+    FILE *sd_file = NULL;
+    char filename[64] = {0};
+
     int count = 0; 
     spi_slave_transaction_t t_recv = {0};
-    t_recv.length    = TRANSFER_SIZE * 8;
+    t_recv.length = TRANSFER_SIZE * 8;
 
     while (1) {
         memset(rx_buf, 0, TRANSFER_SIZE);
@@ -154,25 +211,151 @@ static void spi_handler_task(void *pvParameters) {
             ESP_LOGE(COMM_TAG, "Receive transaction failed: %s", esp_err_to_name(ret));
             continue;
         }
-        ESP_LOGI(COMM_TAG, "%d:  Sent buffer; first byte: 0x%02X, 0x%02X 0x%02X 0x%02X ... 0x%02X 0x%02X ..", count, tx_buf[0], tx_buf[1], tx_buf[2], tx_buf[3], tx_buf[TRANSFER_SIZE - 2], tx_buf[TRANSFER_SIZE - 1]);
-        ESP_LOGI(COMM_TAG, "%d:  Received buffer; first byte: 0x%02X, 0x%02X 0x%02X 0x%02X ... 0x%02X 0x%02X ..", count, rx_buf[0], rx_buf[1], rx_buf[2], rx_buf[3], rx_buf[TRANSFER_SIZE - 2], rx_buf[TRANSFER_SIZE - 1]);
+
+        ESP_LOGI(COMM_TAG, "%d: Sent buffer; first bytes: 0x%02X 0x%02X 0x%02X 0x%02X ... 0x%02X 0x%02X", 
+                 count, tx_buf[0], tx_buf[1], tx_buf[2], tx_buf[3], 
+                 tx_buf[TRANSFER_SIZE - 2], tx_buf[TRANSFER_SIZE - 1]);
+        ESP_LOGI(COMM_TAG, "%d: Received buffer; first bytes: 0x%02X 0x%02X 0x%02X 0x%02X ... 0x%02X 0x%02X", 
+                 count, rx_buf[0], rx_buf[1], rx_buf[2], rx_buf[3], 
+                 rx_buf[TRANSFER_SIZE - 2], rx_buf[TRANSFER_SIZE - 1]);
+
+        // ##########################################################
+        
+        uint8_t pkt_type = rx_buf[0];
+        switch (pkt_type) {
+            case PACKET_TYPE_START:
+                if (fsm_state != FSM_WAIT_START) {
+                    ESP_LOGE(COMM_TAG, "Unexpected START packet received in state %d", fsm_state);
+                    fsm_state = FSM_ERROR;
+                    break;
+                }
+                // byte 0: packet type,
+                // byte 1: CHECK_BYTE,
+                // bytes [2..49]: filename (48 bytes)
+                memcpy(filename, &rx_buf[2], 48);
+                filename[47] = '\0';  
+                sd_file = sdcard_open(filename, "w");
+                if (sd_file == NULL) {
+                    ESP_LOGE(COMM_TAG, "Failed to open file on SD card: %s", filename);
+                    fsm_state = FSM_ERROR;
+                } else {
+                    ESP_LOGI(COMM_TAG, "START packet: Opened file %s for writing", filename);
+                    fsm_state = FSM_WAIT_DATA;
+                    computed_checksum = 0;  
+                }
+                break;
+            case PACKET_TYPE_DATA:
+                if (fsm_state != FSM_WAIT_DATA) {
+                    ESP_LOGE(COMM_TAG, "DATA packet received out of sequence");
+                    fsm_state = FSM_ERROR;
+                    break;
+                } else  {
+                    // Byte 0: Packet type, Byte 1: CHECK_BYTE, Bytes [2-3]: DATA LEN, Bytes [4...]: Data payload
+                    uint16_t data_len = (rx_buf[2] << 8) | rx_buf[3];
+                    if (data_len > 0 && data_len <= (TRANSFER_SIZE - 4)) {
+                        size_t written = sdcard_write(sd_file, &rx_buf[4], data_len);
+                        if (written != data_len) {
+                            ESP_LOGE(COMM_TAG, "SD card write error. Expected %d bytes, wrote %d", data_len, written);
+                            fsm_state = FSM_ERROR;
+                        } else {
+                            for (int i = 0; i < data_len; i++) {
+                                computed_checksum += rx_buf[4 + i];
+                            }
+                            ESP_LOGI(COMM_TAG, "DATA packet processed: %d bytes written", data_len);
+                        }
+                    } else {
+                        ESP_LOGE(COMM_TAG, "Invalid DATA packet length: %d", data_len);
+                        fsm_state = FSM_ERROR;
+                    }
+                }
+                break;
+            case PACKET_TYPE_MID:
+                if (fsm_state != FSM_WAIT_DATA) {
+                    ESP_LOGE(COMM_TAG, "MID packet received out of sequence");
+                    fsm_state = FSM_ERROR;
+                } else {
+                    ESP_LOGI(COMM_TAG, "MID packet received (ignored)");
+                }
+                break;
+            case PACKET_TYPE_END:
+                if (fsm_state != FSM_WAIT_DATA) {
+                    ESP_LOGE(COMM_TAG, "END packet received out of sequence");
+                    fsm_state = FSM_ERROR;
+                } else {
+                    // byte 0: packet type, byte 1: CHECK_BYTE, bytes [2-5]: checksum (big-endian)
+                    unsigned int received_checksum = (rx_buf[2] << 24) | (rx_buf[3] << 16) |
+                                                    (rx_buf[4] << 8)  | rx_buf[5];
+                    ESP_LOGI(COMM_TAG, "END packet received. Received checksum: 0x%08X, Computed checksum: 0x%08X",
+                            received_checksum, computed_checksum);
+                    if (received_checksum != computed_checksum) {
+                        ESP_LOGE(COMM_TAG, "Checksum mismatch");
+                        fsm_state = FSM_ERROR;
+                    } else {
+                        sdcard_close(sd_file);
+                        ESP_LOGI(COMM_TAG, "File transfer complete: %s", filename);
+                        fsm_state = FSM_COMPLETE;
+                    }
+                }
+                break;
+            case PACKET_TYPE_FUC:
+                ESP_LOGE(COMM_TAG, "FUC packet received. Transaction failed.");
+                if (sd_file != NULL) {
+                    sdcard_close(sd_file);
+                    sdcard_delete(filename);
+                    sd_file = NULL;
+                }
+                fsm_state = FSM_ERROR;
+                break;
+            default:
+                ESP_LOGE(COMM_TAG, "Unknown packet type received: 0x%02X", pkt_type);
+                fsm_state = FSM_ERROR;
+                break;
+        }
+        
+        // ##########################################################
+
+        if (fsm_state == FSM_COMPLETE) {
+            ESP_LOGI(COMM_TAG, "FSM completed successfully. Ready for next transaction.");
+            fsm_state = FSM_WAIT_START;
+            computed_checksum = 0;
+            sd_file = NULL;
+            memset(filename, 0, sizeof(filename));
+        } else if (fsm_state == FSM_ERROR) {
+            ESP_LOGE(COMM_TAG, "FSM encountered an error. Cleaning up and resetting.");
+            if (sd_file != NULL) {
+                sdcard_close(sd_file);
+                sdcard_delete(filename);
+                sd_file = NULL;
+            }
+            fsm_state = FSM_WAIT_START;
+            computed_checksum = 0;
+            memset(filename, 0, sizeof(filename));
+        }
 
         memcpy(rx_buf_parent, tx_buf, TRANSFER_SIZE);
-        memcpy(tx_buf, rx_buf, TRANSFER_SIZE);
-        tx_buf[2] = crc8(rx_buf, TRANSFER_SIZE, 3); 
-
-        if (count == 1) { 
-            count = 0; 
+        if (fsm_state != FSM_ERROR) {
+            memcpy(tx_buf, rx_buf, TRANSFER_SIZE);
         } else {
-            count = 1; 
+            memset(tx_buf, 0, TRANSFER_SIZE);
+            tx_buf[0] = PACKET_TYPE_FUC;
         }
+        count = (count == 1) ? 0 : 1;
     }
 }
+
 
 // ##############################################################################
 
 void app_main(void)
 {
+
+    esp_err_t sdret = SDCardInit(); 
+    if (sdret != 0)
+    {
+        ESP_LOGE(COMM_TAG, "SDCARD INITIALIZATION FAILED!: %s", esp_err_to_name(sdret));
+        return;
+    }
+    ESP_LOGI(COMM_TAG, "SDCARD INITIALIZED!");
 
     esp_err_t ret = spi_slave_init(); 
     if (ret != ESP_OK)

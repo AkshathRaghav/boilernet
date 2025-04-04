@@ -13,6 +13,7 @@ PACKET_TYPE_MID   = 0xA2
 PACKET_TYPE_END   = 0xA3
 
 DATA_PACKET_SIZE = 2030
+FILENAME = "example.txt"
 
 class State(Enum):
     IDLE = 0
@@ -34,15 +35,19 @@ def calculate_checksum(data_bytes):
     # A simple checksum: sum of all bytes mod 2^32.
     return sum(data_bytes) & 0xFFFFFFFF
 
-def create_start_packet(width, height, total_data_len):
+def create_start_packet(filename):
     """
     START packet structure:
     [Packet Type (1 byte)]
-    [Width (2 bytes, unsigned short)]
-    [Height (2 bytes, unsigned short)]
-    [Total data length (4 bytes, unsigned int)]
+    [CHECK_BYTE (1 byte)]
+    [Filename (48 bytes)]
     """
-    return struct.pack("!BHHI", PACKET_TYPE_START, width, height, total_data_len)
+    filename_bytes = filename.encode('utf-8')
+    if len(filename_bytes) > 48:
+        filename_bytes = filename_bytes[:48]
+    else:
+        filename_bytes = filename_bytes.ljust(48, b'\0')
+    return struct.pack("!B48s", PACKET_TYPE_START, filename_bytes)
 
 def create_data_packet(data_chunk):
     """
@@ -113,7 +118,7 @@ def fsm_image_transfer(sock, image_path):
     while state != State.COMPLETE and state != State.ERROR:
         if state == State.SEND_START:
             # Build and send START packet
-            start_packet = create_start_packet(width, height, total_data_len)
+            start_packet = create_start_packet(FILENAME)
             sock.sendall(start_packet)
             print("Sent START packet.")
             state = State.WAIT_START_ACK

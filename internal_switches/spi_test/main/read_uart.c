@@ -32,50 +32,6 @@ void UartInit(void) {
     ESP_ERROR_CHECK(uart_driver_install(UART_NUM, BUF_SIZE * 2, 0, 0, NULL, 0));
 }
 
-int SDCardInit(void) {
-    ESP_LOGI("UARTTEST", "FIRST");
-
-    esp_vfs_fat_sdmmc_mount_config_t mount_config = {
-        .format_if_mount_failed = true,
-        .max_files = 5,
-        .allocation_unit_size = 16 * 1024
-    };
-    ESP_LOGI("UARTTEST", "SECOND");
-
-    sdmmc_card_t *card;
-    const char mount_point[] = MOUNT_POINT;
-    // host.max_freq_khz = SDMMC_FREQ_HIGHSPEED;
-    sdmmc_host_t host = SDSPI_HOST_DEFAULT();
-
-    spi_bus_config_t bus_cfg = {
-        .mosi_io_num = PIN_NUM_MOSI,
-        .miso_io_num = PIN_NUM_MISO,
-        .sclk_io_num = PIN_NUM_CLK,
-        .quadwp_io_num = -1,
-        .quadhd_io_num = -1,
-        .max_transfer_sz = 4000,
-    };
-    ESP_LOGI("UARTTEST", "THIRD");
-
-    int ret = spi_bus_initialize(host.slot, &bus_cfg, SDSPI_DEFAULT_DMA);
-    if (ret != ESP_OK) {
-        return ret;
-    }
-    ESP_LOGI("UARTTEST", "FOURTH");
-
-    sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
-    slot_config.gpio_cs = PIN_NUM_CS;
-    slot_config.host_id = host.slot;
-
-    ret = esp_vfs_fat_sdspi_mount(mount_point, &host, &slot_config, &mount_config, &card);
-    ESP_LOGI("UARTTEST", "FIFTH");
-
-    if (ret != ESP_OK) {
-        return ret; 
-    }
-
-    return ESP_OK;
-}
 
 void send_response(const char *response) {
     uart_write_bytes(UART_NUM, response, strlen(response));
@@ -99,9 +55,48 @@ void toggle_led(int num) {
     keep_low(num);
 }
 
-void size_t_to_string(size_t value, char *buffer, size_t buffer_size) {
-    snprintf(buffer, buffer_size, "%zu", value);
+#define MOUNT_POINT "/sdcard"
+
+int SDCardInit(void) {
+
+    esp_vfs_fat_sdmmc_mount_config_t mount_config = {
+        .format_if_mount_failed = true,
+        .max_files = 5,
+        .allocation_unit_size = 16 * 1024
+    };
+
+    sdmmc_card_t *card;
+    const char mount_point[] = MOUNT_POINT;
+    host.max_freq_khz = 5200;
+    sdmmc_host_t host = SDSPI_HOST_DEFAULT();
+
+    spi_bus_config_t bus_cfg = {
+        .mosi_io_num = PIN_NUM_MOSI,
+        .miso_io_num = PIN_NUM_MISO,
+        .sclk_io_num = PIN_NUM_CLK,
+        .quadwp_io_num = -1,
+        .quadhd_io_num = -1,
+        .max_transfer_sz = 4000,
+    };
+
+    int ret = spi_bus_initialize(host.slot, &bus_cfg, SDSPI_DEFAULT_DMA);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+
+    sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
+    slot_config.gpio_cs = PIN_NUM_CS;
+    slot_config.host_id = host.slot;
+
+    ret = esp_vfs_fat_sdspi_mount(mount_point, &host, &slot_config, &mount_config, &card);
+
+    if (ret != ESP_OK) {
+        return ret; 
+    }
+
+    return ESP_OK;
 }
+
 
 void app_main() {
     UartInit();
