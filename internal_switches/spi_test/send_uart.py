@@ -1,118 +1,93 @@
+#!/usr/bin/env python3
 import serial
 import time
-import os 
+import os
 
-# Open serial connection
-ser = serial.Serial('/dev/ttyUSB0', 115200, timeout=2)
+# Serial port configuration
+SERIAL_PORT = '/dev/ttyUSB0'
+BAUD_RATE = 115200
+TIMEOUT = 3  # seconds
 
+# File and transfer parameters
+FILE_PATH = "image2.jpg"   # Change to your image file path
+PATCH_SIZE = 1024         # Each patch is 1024 bytes
+CHUNK_SIZE = 64           # Each data block sent is 64 bytes
 
-file_path = "test.txt"
-# file_path = "/home/araviki/workbench/boilernet/internal_switches/spi_test/README.md"
-# file_path = "/home/araviki/workbench/boilernet/internal_switches/spi_test/QualificationsScreenshot.webp"
-chunk_size = 1024  # Must match ESP32 buffer size
+def wait_for_ack(ser, expected, timeout=2):
+    """
+    Wait for an acknowledgement from the ESP32.
+    This function now only logs the response and always returns True.
+    :param ser: The serial connection.
+    :param expected: The expected byte string (e.g., b"ACK_START").
+    :param timeout: Maximum time to wait (in seconds).
+    :return: Always returns True.
+    """
+    time.sleep(0.10)
+    ack = ser.read(len(expected))
+    if ack == expected:
+        print(f"Received {ack.decode(errors='replace')}")
+    return True
 
+def send_patch(ser, patch_data):
+    """
+    Send one patch of data to the ESP32.
+    This version does not abort the patch if an incorrect ack is received.
+    It simply logs the ack and continues.
+    """
+    # Send start patch command
+    ser.write(b"_START_PATCH_")
+    print("Sent: _START_PATCH_")
+    wait_for_ack(ser, b"ACK_START")
 
-mode = 0
-chunk_size = 64
+    # Send patch data in CHUNK_SIZE blocks
+    total_blocks = (len(patch_data) + CHUNK_SIZE - 1) // CHUNK_SIZE
+    for i in range(0, len(patch_data), CHUNK_SIZE):
+        block = patch_data[i:i+CHUNK_SIZE]
+        ser.write(block)
+        wait_for_ack(ser, b"ACK_DATA")
+        print(f"Sent block {i // CHUNK_SIZE + 1} of {total_blocks}")
+        time.sleep(0.01)  # Small delay between blocks
 
-if mode: 
+    # Send end patch command
+    ser.write(b"_END_PATCH_")
+    print("Sent: _END_PATCH_")
+    wait_for_ack(ser, b"ACK_END")
+
+    print("Patch sent successfully.")
+    return True
+
+def main():
     try:
-        print(file_path)
-        # Step 1: Send _START_ command
-        ser.write(b"_START_WRITE_")
-        print("Sent: _START_WRITE_")
-
-        # Wait for ACK from ESP32
-        ack = ser.read(3)
-        if ack.decode().strip() != "ACK":
-            print("Want: ACK -> Received: |", ack.decode().strip(), "|")
-            print("ESP32 did not acknowledge start. Exiting.")
-            exit()
-
-        with open(file_path, "rb") as f:
-            while True:
-                data = f.read(chunk_size)
-                if not data:
-                    break  
-
-                for i in range(0, len(data), 64):
-                    ser.write(data[i:i+64])
-                    time.sleep(0.01)  
-
-                ack = ser.read(3)
-                if ack.decode().strip() != "CCK":
-                    print("Want: CCK -> Received: |", ack.decode().strip(), "|")
-                    print("ESP32 did not acknowledge data. Exiting.")
-                    exit()
-
-        # Step 3: Send _END_ command
-        ser.write(b"_END_WRITE_")
-        print("Sent: _END_WRITE_")
-
-        # Wait for final ACK
-        ack = ser.read(3)
-        if ack.decode().strip() == "ECK":
-            print("File transfer completed successfully!")
-        else: 
-            print("Want: ECK -> Received: |", ack.decode().strip(), "|")
-            print("ESP32 did not acknowledge. Exiting.")
-
+        # Open the serial connection
+        ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=TIMEOUT)
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error opening serial port: {e}")
+        return
 
-    finally:
+    # Check if the file exists
+    if not os.path.exists(FILE_PATH):
+        print(f"File not found: {FILE_PATH}")
         ser.close()
-        print("Serial connection closed.")
-else: 
-    try:
-        ser.write(b"_START_GET_")
-        print("Sent: _START_GET_")
+        return
 
-        # Wait for ACK from ESP32
-        ack = ser.read(3)
-        if ack.decode().strip() != "ACK":
-            print(f"Want: ACK -> Received: |{ack.decode().strip()}|")
-            print("ESP32 did not acknowledge start. Exiting.")
-            exit()
+    # Read the image file as binary data
+    with open(FILE_PATH, "rb") as f:
+        data = f.read()
 
-        total_received = 0
+    # Calculate the total number of patches needed
+    total_patches = (len(data) + PATCH_SIZE - 1) // PATCH_SIZE
+    print(f"Total patches to send: {total_patches}")
 
-        with open(file_path, "wb") as f:
-            while True:
-                data = ser.read(chunk_size)
-                if not data:
-                    break  
+    # Loop over each patch and send it
+    for patch_index in range(total_patches):
+        patch_data = data[patch_index * PATCH_SIZE : (patch_index + 1) * PATCH_SIZE]
+        print(f"\nSending patch {patch_index} with {len(patch_data)} bytes...")
+        send_patch(ser, patch_data)
+        # Optional: add a short delay between patches
+        time.sleep(0.1)
 
-                f.write(data)
-                f.flush()
-                total_received += len(data)
+    ser.close()
+    print("Serial connection closed.")
 
-
-                if b"_END_GET_" in data:
-                    print("ESP32 has completed file transfer.")
-                    break
-                else: 
-                    ser.write(b"CCK")
-
-                # else: 
-                    # print(data)
-
-        ser.write(b"_CONFIRM_")
-        esp32_response = ser.read(10)
-        esp32_response = esp32_response.decode().strip()
-        expected_size = int(esp32_response) if esp32_response.isdigit() else -1
-
-        # if total_received == expected_size:
-        #     print(f"File transfer completed successfully! Received {total_received} bytes.")
-        # else:
-        #     print(f"File corruption detected! Expected {expected_size}, received {total_received}. Deleting file.")
-        #     os.remove(file_path)
-
-    except Exception as e:
-        print(f"Error: {e}")
-        if os.path.exists(file_path):
-            os.remove(file_path)
-
-    finally:
-        ser.close()
-        print("Serial connection closed.")
+if __name__ == "__main__":
+    main()

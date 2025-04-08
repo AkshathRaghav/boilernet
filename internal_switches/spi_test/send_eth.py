@@ -7,24 +7,23 @@ from enum import Enum
 
 from PIL import Image
 
-PACKET_TYPE_START = 0xA0
-PACKET_TYPE_DATA  = 0xA1
-PACKET_TYPE_MID   = 0xA2
-PACKET_TYPE_END   = 0xA3
+PACKET_TYPE_START_WRITE = 0xA0
+PACKET_TYPE_DATA_WRITE  = 0xA1
+PACKET_TYPE_MID_WRITE   = 0xA2
+PACKET_TYPE_END_WRITE   = 0xA3
 
 DATA_PACKET_SIZE = 2030
 FILENAME = "example.txt"
 
 class State(Enum):
     IDLE = 0
-    SEND_START = 1
-    WAIT_START_ACK = 2
-    SEND_DATA = 3
-    SEND_MID = 4
-    SEND_REMAINING = 5
-    SEND_END = 6
-    WAIT_MID_ACK = 10
-    WAIT_END_ACK = 7
+    SEND_START_WRITE = 1
+    WAIT_START_ACK_WRITE = 2
+    SEND_DATA_WRITE = 3
+    SEND_MID_WRITE = 4
+    SEND_END_WRITE = 6
+    WAIT_MID_ACK_WRITE = 10
+    WAIT_END_ACK_WRITE = 7
     COMPLETE = 8
     ERROR = 9
 
@@ -47,7 +46,7 @@ def create_start_packet(filename):
         filename_bytes = filename_bytes[:48]
     else:
         filename_bytes = filename_bytes.ljust(48, b'\0')
-    return struct.pack("!B48s", PACKET_TYPE_START, filename_bytes)
+    return struct.pack("!B48s", PACKET_TYPE_START_WRITE, filename_bytes)
 
 def create_data_packet(data_chunk):
     """
@@ -57,7 +56,7 @@ def create_data_packet(data_chunk):
     [Payload (data_chunk)]
     """
     length = len(data_chunk)
-    header = struct.pack("!BH", PACKET_TYPE_DATA, length)
+    header = struct.pack("!BH", PACKET_TYPE_DATA_WRITE, length)
     return header + data_chunk
 
 def create_mid_packet():
@@ -67,7 +66,7 @@ def create_mid_packet():
     [Reserved/Padding (if needed, here 2 bytes length field set to zero)]
     """
     # For simplicity, no additional payload
-    return struct.pack("!BH", PACKET_TYPE_MID, 0)
+    return struct.pack("!BH", PACKET_TYPE_MID_WRITE, 0)
 
 def create_end_packet(checksum):
     """
@@ -75,7 +74,7 @@ def create_end_packet(checksum):
     [Packet Type (1 byte)]
     [Checksum (4 bytes, unsigned int)]
     """
-    return struct.pack("!BI", PACKET_TYPE_END, checksum)
+    return struct.pack("!BI", PACKET_TYPE_END_WRITE, checksum)
 
 def wait_for_ack(sock, expected_ack, timeout=5):
     """
@@ -112,32 +111,32 @@ def fsm_image_transfer(sock, image_path):
     total_packets = num_full_packets + (1 if remainder > 0 else 0)
     mid_packet_index = total_packets // 2  # when to send MID packet
 
-    state = State.SEND_START
+    state = State.SEND_START_WRITE
     current_packet = 0  # counter for data packets sent
 
     while state != State.COMPLETE and state != State.ERROR:
-        if state == State.SEND_START:
+        if state == State.SEND_START_WRITE:
             # Build and send START packet
             start_packet = create_start_packet(FILENAME)
             sock.sendall(start_packet)
             print("Sent START packet.")
-            state = State.WAIT_START_ACK
+            state = State.WAIT_START_ACK_WRITE
 
-        elif state == State.WAIT_START_ACK:
-            if wait_for_ack(sock, PACKET_TYPE_START):
+        elif state == State.WAIT_START_ACK_WRITE:
+            if wait_for_ack(sock, PACKET_TYPE_START_WRITE):
                 print("Received ACK for START.")
-                state = State.SEND_DATA
+                state = State.SEND_DATA_WRITE
             else:
                 print("No ACK for START, error.")
                 state = State.ERROR
 
-        elif state == State.SEND_DATA:
+        elif state == State.SEND_DATA_WRITE:
             # Send full 1024 byte data packets until we reach mid
             start_idx = current_packet * DATA_PACKET_SIZE
             end_idx = start_idx + DATA_PACKET_SIZE
             # check bounds
             if start_idx >= total_data_len:
-                state = State.SEND_END
+                state = State.SEND_END_WRITE
                 continue
 
             data_chunk = raw_data[start_idx:end_idx]
@@ -148,37 +147,37 @@ def fsm_image_transfer(sock, image_path):
             current_packet += 1
 
             if current_packet == mid_packet_index:
-                state = State.SEND_MID
+                state = State.SEND_MID_WRITE
 
             # When we've sent all full packets, check if there's remaining data.
             elif current_packet == total_packets:
-                state = State.SEND_END
+                state = State.SEND_END_WRITE
 
-        elif state == State.SEND_MID:
+        elif state == State.SEND_MID_WRITE:
             mid_packet = create_mid_packet()
             sock.sendall(mid_packet)
             print("Sent MID packet.")
             # For simplicity, do not wait for an ACK for MID (or you can add if needed)
-            state = State.WAIT_MID_ACK  # Continue sending the rest
+            state = State.WAIT_MID_ACK_WRITE  # Continue sending the rest
 
-        elif state == State.WAIT_MID_ACK:
-            if wait_for_ack(sock, PACKET_TYPE_MID):
+        elif state == State.WAIT_MID_ACK_WRITE:
+            if wait_for_ack(sock, PACKET_TYPE_MID_WRITE):
                 print("Received ACK for MID.")
-                state = State.SEND_DATA
+                state = State.SEND_DATA_WRITE
             else:
                 print("No ACK for MID, error.")
                 state = State.ERROR
 
-        elif state == State.SEND_END:
+        elif state == State.SEND_END_WRITE:
             # Calculate checksum over entire raw data.
             checksum = calculate_checksum(raw_data)
             end_packet = create_end_packet(checksum)
             sock.sendall(end_packet)
             print(f"Sent END packet with checksum {checksum:#010x}")
-            state = State.WAIT_END_ACK
+            state = State.WAIT_END_ACK_WRITE
 
-        elif state == State.WAIT_END_ACK:
-            if wait_for_ack(sock, PACKET_TYPE_END):
+        elif state == State.WAIT_END_ACK_WRITE:
+            if wait_for_ack(sock, PACKET_TYPE_END_WRITE):
                 print("Received final ACK for END. Transfer complete.")
                 state = State.COMPLETE
             else:

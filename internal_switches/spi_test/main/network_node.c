@@ -91,10 +91,10 @@ extern void ethernet_setup(void);   // Your Ethernet initialization code
 // And a global event group or similar mechanism used in ethernet_setup, if any.
 
 // Packet type definitions
-#define PACKET_TYPE_START 0xA0
-#define PACKET_TYPE_DATA  0xA1
-#define PACKET_TYPE_MID   0xA2
-#define PACKET_TYPE_END   0xA3
+#define PACKET_TYPE_START_WRITE 0xA0
+#define PACKET_TYPE_DATA_WRITE  0xA1
+#define PACKET_TYPE_MID_WRITE   0xA2
+#define PACKET_TYPE_END_WRITE   0xA3
 #define PACKET_TYPE_FUC   0xA4
 
 #define PORT 8080
@@ -102,10 +102,10 @@ static const char *COMM_TAG = "TCP_SOCKET";
 
 // FSM states
 typedef enum {
-    FSM_WAIT_START,
-    FSM_WAIT_DATA,    // After START received, before MID or END
-    FSM_WAIT_MID,     // After MID marker received (optional state; we simply mark that MID is reached)
-    FSM_WAIT_END,
+    FSM_WAIT_START_WRITE,
+    FSM_WAIT_DATA_WRITE,    
+    FSM_WAIT_MID_WRITE,     
+    FSM_WAIT_END_WRITE,
     FSM_COMPLETE,
     FSM_ERROR
 } fsm_state_t;
@@ -439,7 +439,7 @@ static void tcp_server_task(void *pvParameters)
         ESP_LOGI(COMM_TAG, "Connection accepted from %s", addr_str);
 
         // Initialize FSM state and checksum accumulator
-        fsm_state_t state = FSM_WAIT_START;
+        fsm_state_t state = FSM_WAIT_START_WRITE;
         unsigned int computed_checksum = 0;
         unsigned int expected_total_data = 0;
         unsigned int received_data = 0;
@@ -475,9 +475,9 @@ static void tcp_server_task(void *pvParameters)
             }
            
             switch(pkt_type) {
-                case PACKET_TYPE_START:
+                case PACKET_TYPE_START_WRITE:
                 {
-                    if (state != FSM_WAIT_START) {
+                    if (state != FSM_WAIT_START_WRITE) {
                         ESP_LOGE(COMM_TAG, "Unexpected START packet");
                         state = FSM_ERROR;
                         break;
@@ -496,7 +496,7 @@ static void tcp_server_task(void *pvParameters)
                     filename[48] = '\0';
                     ESP_LOGI(COMM_TAG, "START: Filename: %s", filename);
 
-                    tx_buf[0] = PACKET_TYPE_START;
+                    tx_buf[0] = PACKET_TYPE_START_WRITE;
                     tx_buf[1] = 0x00;
                     memcpy(tx_buf + 2, filename_payload, 48);
 
@@ -505,7 +505,7 @@ static void tcp_server_task(void *pvParameters)
                         state = FSM_ERROR;
                         break;
                     }
-                    expected_rx_buf[0] = PACKET_TYPE_START;
+                    expected_rx_buf[0] = PACKET_TYPE_START_WRITE;
                     memcpy(expected_rx_buf + 2, tx_buf + 2, TRANSFER_SIZE - 2);
 
                     if (send(sock, &pkt_type, 1, 0) < 0) {
@@ -513,10 +513,10 @@ static void tcp_server_task(void *pvParameters)
                         state = FSM_ERROR;
                         break;
                     }
-                    state = FSM_WAIT_DATA;
+                    state = FSM_WAIT_DATA_WRITE;
                     break;
                 }
-                case PACKET_TYPE_DATA:
+                case PACKET_TYPE_DATA_WRITE:
                 {
                     uint8_t len_buf[2];
                     if (recv_all(sock, len_buf, sizeof(len_buf)) != 0) {
@@ -528,7 +528,7 @@ static void tcp_server_task(void *pvParameters)
 
                     if (data_len == 0) break;
 
-                    tx_buf[0] = PACKET_TYPE_DATA;
+                    tx_buf[0] = PACKET_TYPE_DATA_WRITE;
                     tx_buf[1] = 0x00;  
                     tx_buf[2] = (data_len >> 8) & 0xFF;
                     tx_buf[3] = data_len & 0xFF;
@@ -539,14 +539,14 @@ static void tcp_server_task(void *pvParameters)
                         state = FSM_ERROR;
                         break;
                     }
-                    ESP_LOGI(COMM_TAG, "IN PACKET_TYPE_DATA, data_len: %d", data_len);
+                    ESP_LOGI(COMM_TAG, "IN PACKET_TYPE_DATA_WRITE, data_len: %d", data_len);
 
                     if (spi_send_packet(t, tx_buf, rx_buf, expected_rx_buf) != 0) {
                         ESP_LOGE(COMM_TAG, "SPI DATA packet verification failed.");
                         state = FSM_ERROR;
                         break;
                     }
-                    expected_rx_buf[0] = PACKET_TYPE_DATA;
+                    expected_rx_buf[0] = PACKET_TYPE_DATA_WRITE;
                     expected_rx_buf[1] = tx_buf[1];
                     memcpy(expected_rx_buf + 2, tx_buf + 2, TRANSFER_SIZE - 2);
 
@@ -558,7 +558,7 @@ static void tcp_server_task(void *pvParameters)
                     break;
                 }
 
-                case PACKET_TYPE_MID:
+                case PACKET_TYPE_MID_WRITE:
                 {
                     uint8_t mid_buf[2];
                     if (recv_all(sock, mid_buf, sizeof(mid_buf)) != 0) {
@@ -568,7 +568,7 @@ static void tcp_server_task(void *pvParameters)
                     }
                     ESP_LOGI(COMM_TAG, "!!!!~MID packet received~!!!!");
 
-                    tx_buf[0] = PACKET_TYPE_MID; 
+                    tx_buf[0] = PACKET_TYPE_MID_WRITE; 
                     // memset(tx_buf + 2, 0, TRANSFER_SIZE - 2);
                     if (spi_send_packet(t, tx_buf, rx_buf, expected_rx_buf) != 0)
                     {
@@ -576,7 +576,7 @@ static void tcp_server_task(void *pvParameters)
                         state = FSM_ERROR;
                         break;
                     }
-                    expected_rx_buf[0] = PACKET_TYPE_MID;
+                    expected_rx_buf[0] = PACKET_TYPE_MID_WRITE;
                     expected_rx_buf[1] = tx_buf[1];
                     // memset(expected_rx_buf + 2, 0, TRANSFER_SIZE - 2);
 
@@ -585,11 +585,11 @@ static void tcp_server_task(void *pvParameters)
                         state = FSM_ERROR;
                         break;
                     }
-                    state = FSM_WAIT_DATA; 
+                    state = FSM_WAIT_DATA_WRITE; 
 
                     break;
                 }
-                case PACKET_TYPE_END:
+                case PACKET_TYPE_END_WRITE:
                 {
                     uint8_t end_buf[4];
                     if (recv_all(sock, end_buf, sizeof(end_buf)) != 0) {
@@ -605,7 +605,7 @@ static void tcp_server_task(void *pvParameters)
                         ESP_LOGE(COMM_TAG, "Checksum mismatch!");
                         state = FSM_ERROR;
                     } else {
-                        tx_buf[0] = PACKET_TYPE_END; 
+                        tx_buf[0] = PACKET_TYPE_END_WRITE; 
                         // memset(tx_buf + 2, 0, TRANSFER_SIZE - 2);
                         if (spi_send_packet(t, tx_buf, rx_buf, expected_rx_buf) != 0)
                         {
@@ -613,7 +613,7 @@ static void tcp_server_task(void *pvParameters)
                             state = FSM_ERROR;
                             break;
                         }
-                        expected_rx_buf[0] = PACKET_TYPE_END;
+                        expected_rx_buf[0] = PACKET_TYPE_END_WRITE;
                         expected_rx_buf[1] = tx_buf[1];
                         // memset(expected_rx_buf + 2, 0, TRANSFER_SIZE - 2);
                         if (send(sock, &pkt_type, 1, 0) < 0)

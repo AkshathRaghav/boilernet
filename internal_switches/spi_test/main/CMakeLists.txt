@@ -1,6 +1,8 @@
 # set(srcs "network_node.c")
 set(srcs "internal_switch.c")
 
+# set(srcs "sd_card_example_main.c")
+
 # set(srcs "new_network_node.c")
 # set(srcs "new_internal_switch.c")
 
