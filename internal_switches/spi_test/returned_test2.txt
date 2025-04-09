@@ -67,14 +67,10 @@
 #define ETH_MDIO_GPIO           18
 #define ETH_TAG                 "ETH"
 
-#define EMAC_TX_CLK             0 
-#define EMAC_RX_CLK             5
-
 static EventGroupHandle_t s_eth_event_group;
 
 #define ETHERNET_CONNECTED_BIT  BIT0
 #define ETHERNET_FAIL_BIT       BIT1
-#define PORT 8080
 
 #define STATIC_IP               1
 
@@ -86,36 +82,29 @@ static EventGroupHandle_t s_eth_event_group;
 
 static netif_input_fn default_input = NULL;
 
-static const char *COMM_TAG = "TCP_SOCKET";
 
 // Make sure your Ethernet setup functions are defined somewhere, for example:
 extern void ethernet_setup(void);   // Your Ethernet initialization code
 // And a global event group or similar mechanism used in ethernet_setup, if any.
 
 // Packet type definitions
-#define PACKET_TYPE_START_WRITE 0xA0
-#define PACKET_TYPE_DATA_WRITE  0xA1
-#define PACKET_TYPE_MID_WRITE   0xA2
-#define PACKET_TYPE_END_WRITE   0xA3
-#define PACKET_TYPE_FUC   0xA4
+#define PACKET_TYPE_START 0xA0
+#define PACKET_TYPE_DATA  0xA1
+#define PACKET_TYPE_MID   0xA2
+#define PACKET_TYPE_END   0xA3
 
-#define PACKET_TYPE_START_READ 0xB0
-#define PACKET_TYPE_DATA_READ  0xB1
-#define PACKET_TYPE_END_READ   0xB3
+#define PORT 8080
+static const char *COMM_TAG = "TCP_SOCKET";
 
-// Extend your FSM states (update your fsm_state_t enum)
+// FSM states
 typedef enum {
-    FSM_WAIT_START_WRITE,
-    FSM_WAIT_DATA_WRITE,    
-    FSM_WAIT_MID_WRITE,     
-    FSM_WAIT_END_WRITE,
-    FSM_WAIT_START_READ,    // <-- New: waiting for START_READ command
-    FSM_WAIT_DATA_READ,     // <-- New: actively sending file data from slave
-    FSM_WAIT_END_READ,      // <-- New: sending final checksum (or error code)
+    FSM_WAIT_START,
+    FSM_WAIT_DATA,    // After START received, before MID or END
+    FSM_WAIT_MID,     // After MID marker received (optional state; we simply mark that MID is reached)
+    FSM_WAIT_END,
     FSM_COMPLETE,
     FSM_ERROR
 } fsm_state_t;
-
 
 // ################################################################
 
@@ -226,15 +215,13 @@ static int spi_send_packet_clear(spi_transaction_t t, uint8_t *tx_buf, uint8_t *
 }
 
 static int confirm_packet(uint8_t *rx_buf, uint8_t *expected_rx_buf) { 
-    if (rx_buf[0] == PACKET_TYPE_FUC) return 1; 
-
     for (int i = 0; i < TRANSFER_SIZE; i++)
     {
         if ((i != 1) && (rx_buf[i] != expected_rx_buf[i])) { 
             if (i == 0) { 
-                ESP_LOGE(COMM_TAG, "    MISMATCH: SPI COMMAND: (expected 0x%02X, got 0x%02X)\n", expected_rx_buf[0], rx_buf[0]);
+                ESP_LOGE(COMM_TAG, "    MISMATCH: SPI COMMAND: expected 0x%02X, got 0x%02X\n", expected_rx_buf[0], rx_buf[0]);
             } else { 
-                ESP_LOGE(COMM_TAG, "    MISMATCH: DATA WRONG: [%d] (expected 0x%02X, got 0x%02X)", i, expected_rx_buf[i], rx_buf[i]);
+                ESP_LOGE(COMM_TAG, "    MISMATCH: DATA WRONG: [%d] 0x%02X, 0x%02X 0x%02X 0x%02X ... 0x%02X 0x%02X", i, expected_rx_buf[2], expected_rx_buf[3], expected_rx_buf[4], expected_rx_buf[5], expected_rx_buf[TRANSFER_SIZE - 2], expected_rx_buf[TRANSFER_SIZE - 1]);
             }
             return -1; 
         }
@@ -247,7 +234,6 @@ static int confirm_packet(uint8_t *rx_buf, uint8_t *expected_rx_buf) {
 static int spi_send_packet(spi_transaction_t t, uint8_t *tx_buf, uint8_t *rx_buf, uint8_t *expected_rx_buf)
 {
     esp_err_t ret;
-    int rett; 
 
     wait_for_slave_ready();
 
@@ -267,10 +253,7 @@ static int spi_send_packet(spi_transaction_t t, uint8_t *tx_buf, uint8_t *rx_buf
 
     if (expected_rx_buf != NULL) { 
         if ((expected_rx_buf[0] != 0) && confirm_packet(rx_buf, expected_rx_buf) != 0) {
-            if (rx_buf[0] == PACKET_TYPE_FUC)
-                return -1; 
-                
-            tx_buf[1] = 0;
+            tx_buf[1] = 0; 
 
             int attempt = 0; 
             while (attempt < 3) { 
@@ -284,13 +267,13 @@ static int spi_send_packet(spi_transaction_t t, uint8_t *tx_buf, uint8_t *rx_buf
                 t.tx_buffer = expected_rx_buf;
                 t.rx_buffer = rx_buf;
 
-                ESP_LOGW(COMM_TAG, "         %d,0 -> Sending data: 0x%02X 0x%02X 0x%02X 0x%02X ...", attempt, expected_rx_buf[0], expected_rx_buf[1], expected_rx_buf[2], expected_rx_buf[3]);
+                ESP_LOGW(COMM_TAG, "         %d -> Sending data: 0x%02X 0x%02X 0x%02X 0x%02X ...", attempt, expected_rx_buf[0], expected_rx_buf[1], expected_rx_buf[2], expected_rx_buf[3]);
                 ret = spi_device_polling_transmit(spi_master_handle, &t);
                 if (ret != ESP_OK) {
-                    ESP_LOGE(COMM_TAG, "             %d,0 -> SPI transaction failed: %s", attempt, esp_err_to_name(ret));
+                    ESP_LOGE(COMM_TAG, "             %d -> SPI transaction failed: %s", attempt, esp_err_to_name(ret));
                     return -1; 
                 }
-                ESP_LOGW(COMM_TAG, "         %d,0 -> Received data: 0x%02X 0x%02X 0x%02X 0x%02X ...", attempt, rx_buf[0], rx_buf[1], rx_buf[2], rx_buf[3]);
+                ESP_LOGW(COMM_TAG, "         %d -> Received data: 0x%02X 0x%02X 0x%02X 0x%02X ...", attempt, rx_buf[0], rx_buf[1], rx_buf[2], rx_buf[3]);
 
 
                 // #########################################
@@ -303,68 +286,54 @@ static int spi_send_packet(spi_transaction_t t, uint8_t *tx_buf, uint8_t *rx_buf
                 t.tx_buffer = tx_buf;
                 t.rx_buffer = rx_buf;
 
-                ESP_LOGW(COMM_TAG, "         %d,1 -> Sending data: 0x%02X 0x%02X 0x%02X 0x%02X ...", attempt, tx_buf[0], tx_buf[1], tx_buf[2], tx_buf[3]);
+                ESP_LOGW(COMM_TAG, "         %d -> Sending data: 0x%02X 0x%02X 0x%02X 0x%02X ...", attempt, expected_rx_buf[0], expected_rx_buf[1], expected_rx_buf[2], expected_rx_buf[3]);
                 ret = spi_device_polling_transmit(spi_master_handle, &t);
                 if (ret != ESP_OK) {
-                    ESP_LOGE(COMM_TAG, "             %d,1 -> SPI transaction failed: %s", attempt, esp_err_to_name(ret));
+                    ESP_LOGE(COMM_TAG, "             %d -> SPI transaction failed: %s", attempt, esp_err_to_name(ret));
                     return -1; 
                 }
-                ESP_LOGW(COMM_TAG, "         %d,1 -> Received data: 0x%02X 0x%02X 0x%02X 0x%02X ...", attempt, rx_buf[0], rx_buf[1], rx_buf[2], rx_buf[3]);
+                ESP_LOGW(COMM_TAG, "         %d -> Received data: 0x%02X 0x%02X 0x%02X 0x%02X ...", attempt, rx_buf[0], rx_buf[1], rx_buf[2], rx_buf[3]);
 
-                rett = confirm_packet(rx_buf, expected_rx_buf); 
-                if (rett < 0)
-                {
-                    attempt++;
+                if (confirm_packet(rx_buf, expected_rx_buf) != 0) {
                     continue;
-                } else if (rett > 0) { 
-                    return 1; 
                 }
 
                 // #########################################
 
                 wait_for_slave_ready();
 
+                // memset(&t, 0, sizeof(t));
+                // t.length = TRANSFER_SIZE * 8;  // in bits.
                 tx_buf[1] = 1;
                 t.tx_buffer = tx_buf;
                 t.rx_buffer = rx_buf;
 
-                ESP_LOGW(COMM_TAG, "         %d,2 -> Sending SAME data: 0x%02X 0x%02X 0x%02X 0x%02X ...", attempt, tx_buf[0], tx_buf[1], tx_buf[2], tx_buf[3]);
+                ESP_LOGW(COMM_TAG, "         %d -> Sending data: 0x%02X 0x%02X 0x%02X 0x%02X ...", attempt, expected_rx_buf[0], expected_rx_buf[1], expected_rx_buf[2], expected_rx_buf[3]);
                 ret = spi_device_polling_transmit(spi_master_handle, &t);
                 if (ret != ESP_OK) {
-                    ESP_LOGE(COMM_TAG, "         %d,2 -> SPI transaction failed: %s", attempt, esp_err_to_name(ret));
+                    ESP_LOGE(COMM_TAG, "         %d -> SPI transaction failed: %s", attempt, esp_err_to_name(ret));
                     return -1; 
                 }
-                ESP_LOGW(COMM_TAG, "         %d,2 -> Received data: 0x%02X 0x%02X 0x%02X 0x%02X ...", attempt, rx_buf[0], rx_buf[1], rx_buf[2], rx_buf[3]);
+                ESP_LOGW(COMM_TAG, "         %d -> Received data: 0x%02X 0x%02X 0x%02X 0x%02X ...", attempt, rx_buf[0], rx_buf[1], rx_buf[2], rx_buf[3]);
 
-                rett = confirm_packet(rx_buf, expected_rx_buf); 
-                if (rett < 0)
-                {
-                    attempt++;
+                if (confirm_packet(rx_buf, tx_buf) != 0) {
                     continue;
-                } else if (rett > 0) { 
-                    return 1; 
-                } else {
-                    break;
                 }
+
+                attempt++;
             }
 
             return -1; 
         } else { 
-            tx_buf[1] = 1;
-            return 0; 
+            tx_buf[1] = 1; 
         }
     }
     else
     {
         tx_buf[1] = 1;
-        return 0; 
     }
-}
 
-static int spi_receive_packet(spi_transaction_t t, uint8_t *tx_buf, uint8_t *rx_buf)
-{
-    ESP_LOGI(COMM_TAG, "    Receiving Packet");
-    return spi_send_packet(t, tx_buf, rx_buf, NULL);
+    return 0;
 }
 
 
@@ -383,97 +352,6 @@ static int recv_all(int sock, void *buffer, size_t len) {
     }
     return 0;
 }
-
-
-
-int fsm_file_read_master(int sock, spi_transaction_t t,
-                         uint8_t *dummy_tx_buf, uint8_t *rx_buf)
-{
-    int ret, data_len;
-    unsigned int computed_checksum = 0;
-    unsigned int received_data = 0;
-    memset(dummy_tx_buf, 0, TRANSFER_SIZE);
-    dummy_tx_buf[0] = PACKET_TYPE_DATA_READ; 
-    
-    while (1) {
-
-        // Perform one SPI transaction to receive a packet from the slave.
-        ret = spi_receive_packet(t, dummy_tx_buf, rx_buf);
-        if (ret != 0) {
-            ESP_LOGE(COMM_TAG, "SPI read transaction failed.");
-            return -1;
-        }
-        
-        // Parse the incoming SPI packet based on packet type.
-        uint8_t pkt_type = rx_buf[0];
-
-        if (pkt_type == PACKET_TYPE_DATA_READ) {
-            // DATA packet structure: 
-            // [Packet Type (1 byte)] [Data length (2 bytes)] [Payload (data_chunk)]
-            uint16_t len = (rx_buf[1] << 8) | rx_buf[2];
-            data_len = len;
-            ESP_LOGI(COMM_TAG, "DATA_READ packet: data length = %d", data_len);
-            
-            // Forward the DATA_READ packet to the router:
-            // First, send the 1-byte packet type.
-            if (send(sock, rx_buf, 1, 0) < 0) {
-                ESP_LOGE(COMM_TAG, "Failed to forward packet type to router");
-                return -1;
-            }
-            // Then, send the 2-byte length header.
-            if (send(sock, rx_buf + 1, 2, 0) < 0) {
-                ESP_LOGE(COMM_TAG, "Failed to forward data length to router");
-                return -1;
-            }
-            // Finally, send the payload (data_len bytes).
-            if (send(sock, rx_buf + 3, data_len, 0) < 0) {
-                ESP_LOGE(COMM_TAG, "Failed to forward data payload to router");
-                return -1;
-            }
-            
-            // Accumulate checksum from payload (optional, if desired).
-            for (int i = 0; i < data_len; i++) {
-                computed_checksum += rx_buf[3 + i];
-            }
-            received_data += data_len;
-
-            dummy_tx_buf[0] = PACKET_TYPE_DATA_READ; 
-
-            ESP_LOGI(COMM_TAG, "Forwarded DATA_READ packet, %d bytes", data_len);
-        }
-        else if (pkt_type == PACKET_TYPE_END_READ) {
-            // END packet structure:
-            // [Packet Type (1 byte)] [Checksum (4 bytes)]
-            unsigned int slave_checksum = (rx_buf[1] << 24) | (rx_buf[2] << 16) |
-                                      (rx_buf[3] << 8) | rx_buf[4];
-            ESP_LOGI(COMM_TAG, "END_READ packet: Slave checksum = 0x%08X, Computed checksum = 0x%08X",
-                     slave_checksum, computed_checksum);
-                    
-            // Forward the END_READ packet to the router.
-            if (send(sock, rx_buf, 5, 0) < 0) {
-                ESP_LOGE(COMM_TAG, "Failed to send END_READ packet to router");
-                return -1;
-            }
-
-            if (slave_checksum == 0xFFFFFFFF) return -1; 
-
-            dummy_tx_buf[0] = PACKET_TYPE_END_READ; 
-            break;  
-        }
-        else if (pkt_type == PACKET_TYPE_START_READ) { 
-            continue; 
-        }
-        else {
-            ESP_LOGE(COMM_TAG, "Unexpected SPI packet type received in read FSM: 0x%02X", pkt_type);
-            return -1;
-        }
-    }
-
-    ESP_LOGI(COMM_TAG, "Read FSM complete. Total data forwarded: %u bytes", received_data);
-    return 0;
-}
-
-
 
 static void tcp_server_task(void *pvParameters)
 {
@@ -546,14 +424,13 @@ static void tcp_server_task(void *pvParameters)
         ESP_LOGI(COMM_TAG, "Connection accepted from %s", addr_str);
 
         // Initialize FSM state and checksum accumulator
-        fsm_state_t state = FSM_WAIT_START_WRITE;
+        fsm_state_t state = FSM_WAIT_START;
         unsigned int computed_checksum = 0;
         unsigned int expected_total_data = 0;
         unsigned int received_data = 0;
         uint8_t previous_spi_packet = 0; // For the very first transaction, no previous packet is expected.
         uint16_t previous_spi_paacket_len = 0; 
         uint8_t *previous_data_chunk = NULL; 
-        uint16_t data_len = 0;
 
         uint8_t *tx_buf = heap_caps_malloc(TRANSFER_SIZE, MALLOC_CAP_DMA);
         uint8_t *rx_buf = heap_caps_malloc(TRANSFER_SIZE, MALLOC_CAP_DMA);
@@ -582,90 +459,86 @@ static void tcp_server_task(void *pvParameters)
             }
            
             switch(pkt_type) {
-                // ---------- Write FSM handling  ------------
-                case PACKET_TYPE_START_WRITE:
+                case PACKET_TYPE_START:
                 {
-                    if (state != FSM_WAIT_START_WRITE) {
+                    if (state != FSM_WAIT_START) {
                         ESP_LOGE(COMM_TAG, "Unexpected START packet");
                         state = FSM_ERROR;
                         break;
                     }
                     
-                    uint8_t filename_payload[48];
-                    if (recv_all(sock, filename_payload, sizeof(filename_payload)) != 0) {
-                        ESP_LOGE(COMM_TAG, "Failed to read START packet payload (filename)");
+                    uint8_t buffer[8];
+                    if (recv_all(sock, buffer, sizeof(buffer)) != 0) {
+                        ESP_LOGE(COMM_TAG, "Failed to read START packet payload");
                         state = FSM_ERROR;
                         break;
                     }
                     
-                    // Convert payload to a null-terminated filename string
-                    char filename[49];
-                    memcpy(filename, filename_payload, 48);
-                    filename[48] = '\0';
-                    ESP_LOGI(COMM_TAG, "START: Filename: %s", filename);
+                    uint16_t width, height;
+                    unsigned int total_len;
+                    width = (buffer[0] << 8) | buffer[1];
+                    height = (buffer[2] << 8) | buffer[3];
+                    total_len = (buffer[4] << 24) | (buffer[5] << 16) | (buffer[6] << 8) | buffer[7];
+                    expected_total_data = total_len;
+                    ESP_LOGI(COMM_TAG, "START: Image dimensions: %dx%d, total data: %u bytes", width, height, total_len);
 
-                    tx_buf[0] = PACKET_TYPE_START_WRITE;
-                    tx_buf[1] = 0x00;
-                    memcpy(tx_buf + 2, filename_payload, 48);
-
-                    if (spi_send_packet(t, tx_buf, rx_buf, NULL) != 0) {
+                    tx_buf[0] = PACKET_TYPE_START;
+                    tx_buf[1] = 1; 
+                    if (spi_send_packet(t, tx_buf, rx_buf, NULL) != 0)
+                    {
                         ESP_LOGE(COMM_TAG, "SPI START packet verification failed.");
                         state = FSM_ERROR;
                         break;
                     }
-                    expected_rx_buf[0] = PACKET_TYPE_START_WRITE;
-                    memcpy(expected_rx_buf + 2, tx_buf + 2, TRANSFER_SIZE - 2);
+                    expected_rx_buf[0] = PACKET_TYPE_START;
 
                     if (send(sock, &pkt_type, 1, 0) < 0) {
                         ESP_LOGE(COMM_TAG, "Failed to send START ACK");
                         state = FSM_ERROR;
                         break;
                     }
-                    state = FSM_WAIT_DATA_WRITE;
+                    state = FSM_WAIT_DATA;
                     break;
                 }
-                case PACKET_TYPE_DATA_WRITE:
+                case PACKET_TYPE_DATA:
                 {
+                    
                     uint8_t len_buf[2];
                     if (recv_all(sock, len_buf, sizeof(len_buf)) != 0) {
                         ESP_LOGE(COMM_TAG, "Failed to read DATA length");
                         state = FSM_ERROR;
                         break;
                     }
-                    data_len = (len_buf[0] << 8) | len_buf[1];
-
+                    uint16_t data_len = (len_buf[0] << 8) | len_buf[1];
+                    
                     if (data_len == 0) break;
 
-                    tx_buf[0] = PACKET_TYPE_DATA_WRITE;
-                    tx_buf[1] = 0x00;  
-                    tx_buf[2] = (data_len >> 8) & 0xFF;
-                    tx_buf[3] = data_len & 0xFF;
-
-                    if (recv_all(sock, tx_buf + 4, data_len) != 0)
+                    if (recv_all(sock, tx_buf + 2, data_len) != 0)
                     {
                         ESP_LOGE(COMM_TAG, "Failed to read DATA payload");
                         state = FSM_ERROR;
                         break;
                     }
-                    ESP_LOGI(COMM_TAG, "IN PACKET_TYPE_DATA_WRITE, data_len: %d", data_len);
+                    ESP_LOGI(COMM_TAG, "IN PACKET_TYPE_DATA, data_len: %d", data_len);
 
+                    tx_buf[0] = PACKET_TYPE_DATA; 
                     if (spi_send_packet(t, tx_buf, rx_buf, expected_rx_buf) != 0) {
                         ESP_LOGE(COMM_TAG, "SPI DATA packet verification failed.");
                         state = FSM_ERROR;
                         break;
                     }
-                    expected_rx_buf[0] = PACKET_TYPE_DATA_WRITE;
+                    expected_rx_buf[0] = PACKET_TYPE_DATA;
                     expected_rx_buf[1] = tx_buf[1];
                     memcpy(expected_rx_buf + 2, tx_buf + 2, TRANSFER_SIZE - 2);
 
-                    for (int i = 0; i < data_len; i++) {
-                        computed_checksum += tx_buf[4 + i];
+                    for (int i = 2; i < data_len + 2; i++) {
+                        computed_checksum += tx_buf[i];
                     }
                     received_data += data_len;
 
                     break;
                 }
-                case PACKET_TYPE_MID_WRITE:
+                case PACKET_TYPE_MID:
                 {
                     uint8_t mid_buf[2];
                     if (recv_all(sock, mid_buf, sizeof(mid_buf)) != 0) {
@@ -675,7 +548,7 @@ static void tcp_server_task(void *pvParameters)
                     }
                     ESP_LOGI(COMM_TAG, "!!!!~MID packet received~!!!!");
 
-                    tx_buf[0] = PACKET_TYPE_MID_WRITE; 
+                    tx_buf[0] = PACKET_TYPE_MID; 
                     // memset(tx_buf + 2, 0, TRANSFER_SIZE - 2);
                     if (spi_send_packet(t, tx_buf, rx_buf, expected_rx_buf) != 0)
                     {
@@ -683,7 +556,7 @@ static void tcp_server_task(void *pvParameters)
                         state = FSM_ERROR;
                         break;
                     }
-                    expected_rx_buf[0] = PACKET_TYPE_MID_WRITE;
+                    expected_rx_buf[0] = PACKET_TYPE_MID;
                     expected_rx_buf[1] = tx_buf[1];
                     // memset(expected_rx_buf + 2, 0, TRANSFER_SIZE - 2);
 
@@ -692,11 +565,11 @@ static void tcp_server_task(void *pvParameters)
                         state = FSM_ERROR;
                         break;
                     }
-                    state = FSM_WAIT_DATA_WRITE; 
+                    state = FSM_WAIT_DATA; 
 
                     break;
                 }
-                case PACKET_TYPE_END_WRITE:
+                case PACKET_TYPE_END:
                 {
                     uint8_t end_buf[4];
                     if (recv_all(sock, end_buf, sizeof(end_buf)) != 0) {
@@ -712,89 +585,32 @@ static void tcp_server_task(void *pvParameters)
                         ESP_LOGE(COMM_TAG, "Checksum mismatch!");
                         state = FSM_ERROR;
                     } else {
-                        tx_buf[0] = PACKET_TYPE_END_WRITE;
-                        tx_buf[1] = 0x00; 
-                        tx_buf[2] = end_buf[0]; 
-                        tx_buf[3] = end_buf[1]; 
-                        tx_buf[4] = end_buf[2]; 
-                        tx_buf[5] = end_buf[3]; 
-
+                        tx_buf[0] = PACKET_TYPE_END; 
+                        // memset(tx_buf + 2, 0, TRANSFER_SIZE - 2);
                         if (spi_send_packet(t, tx_buf, rx_buf, expected_rx_buf) != 0)
                         {
                             ESP_LOGE(COMM_TAG, "SPI DATA packet verification failed.");
                             state = FSM_ERROR;
                             break;
                         }
+                        expected_rx_buf[0] = PACKET_TYPE_END;
+                        expected_rx_buf[1] = tx_buf[1];
+                        // memset(expected_rx_buf + 2, 0, TRANSFER_SIZE - 2);
 
-                        memcpy(expected_rx_buf, tx_buf, TRANSFER_SIZE);
-
+                        if (send(sock, &pkt_type, 1, 0) < 0)
+                        {
+                            ESP_LOGE(COMM_TAG, "Failed to send END ACK");
+                            state = FSM_ERROR;
+                            break;
+                        }
                         state = FSM_COMPLETE;
                     }
                     break;
                 }
-                
-                // ---------- Read FSM handling ------------
-                case PACKET_TYPE_START_READ:
-                {
-                    if (state != FSM_WAIT_START_WRITE) { // FSM_WAIT_START_WRITE is being used as an IDLE State here. Not the best logic lol.
-                        ESP_LOGE(COMM_TAG, "Unexpected START_READ packet");
-                        state = FSM_ERROR;
-                        break;
-                    }
-                    uint8_t filename_payload[48];
-                    if (recv_all(sock, filename_payload, sizeof(filename_payload)) != 0) {
-                        ESP_LOGE(COMM_TAG, "Failed to read START_READ filename payload");
-                        state = FSM_ERROR;
-                        break;
-                    }
-                    char filename[49];
-                    memcpy(filename, filename_payload, 48);
-                    filename[48] = '\0';
-                    ESP_LOGI(COMM_TAG, "START_READ: Filename: %s", filename);
-                    
-                    // Forward the read command to the slave via SPI.
-                    tx_buf[0] = PACKET_TYPE_START_READ;
-                    tx_buf[1] = 0x00;
-                    memcpy(tx_buf + 2, filename_payload, 48);
-                    if (spi_send_packet(t, tx_buf, rx_buf, expected_rx_buf) != 0) {
-                        ESP_LOGE(COMM_TAG, "SPI START_READ command failed.");
-                        state = FSM_ERROR;
-                        break;
-                    }
-                    
-                    // Send an ACK back to the router for the START_READ command.
-                    if (send(sock, &pkt_type, 1, 0) < 0) {
-                        ESP_LOGE(COMM_TAG, "Failed to send START_READ ACK");
-                        state = FSM_ERROR;
-                        break;
-                    }
-                    
-                    // Transition to the state for reading data from the slave.
-                    state = FSM_WAIT_DATA_READ;
-                    
-                    // Now call the new read FSM that reads data over SPI and sends it over Ethernet.
-                    if (fsm_file_read_master(sock, t, tx_buf, rx_buf) != 0) {
-                        ESP_LOGE(COMM_TAG, "FSM file read on Master failed.");
-                        state = FSM_ERROR;
-                    }
-                    
-                    // After the read FSM completes, mark the overall transaction as complete.
-                    state = FSM_COMPLETE;
-                    break;
-                }
-                
-                // --------------------------------------------------
-                case PACKET_TYPE_FUC: 
-                {
-                    state = FSM_ERROR;
-                    break; 
-                } 
                 default:
-                {
                     ESP_LOGE(COMM_TAG, "Unknown packet type received: 0x%02X", pkt_type);
                     state = FSM_ERROR;
                     break;
-                }
             } 
         } 
 
@@ -805,30 +621,15 @@ static void tcp_server_task(void *pvParameters)
             {
                 ESP_LOGE(COMM_TAG, "FSM_COMPLETE: SPI DATA packet verification failed.");
                 state = FSM_ERROR;
+                break;
             }
             spi_send_packet_clear(t, tx_buf, rx_buf); 
-        } 
-        
-        if (state == FSM_ERROR) {
+        } else {
             previous_spi_packet = 0;
             memset(tx_buf, 0, TRANSFER_SIZE);
-            tx_buf[0] = PACKET_TYPE_FUC;
-            if (send(sock, &tx_buf[0], 1, 0) < 0)
-            {
-                ESP_LOGE(COMM_TAG, "Failed to send END ACK");
-                state = FSM_ERROR;
-                break;
-            }
             if (spi_send_packet(t, tx_buf, rx_buf, expected_rx_buf) != 0)
             {
-                ESP_LOGE(COMM_TAG, "FSM_ERROR: SPI DATA packet verification failed.");
-                state = FSM_ERROR;
-                break;
-            }
-            tx_buf[0] = 0x00;
-            if (spi_send_packet(t, tx_buf, rx_buf, expected_rx_buf) != 0)
-            {
-                ESP_LOGE(COMM_TAG, "FSM_ERROR: SPI DATA packet verification failed.");
+                ESP_LOGE(COMM_TAG, "FSM_COMPLETE: SPI DATA packet verification failed.");
                 state = FSM_ERROR;
                 break;
             }
@@ -908,9 +709,7 @@ static esp_eth_handle_t eth_init_internal(esp_eth_mac_t **mac_out, esp_eth_phy_t
         .smi_mdc_gpio_num  = ETH_MDC_GPIO,                       
         .smi_mdio_gpio_num = ETH_MDIO_GPIO,                      
         .interface = EMAC_DATA_INTERFACE_RMII,        
-        .clock_config = { .rmii = { .clock_mode = EMAC_CLK_OUT, .clock_gpio = EMAC_CLK_OUT_180_GPIO } }, // ESP32 WROOM
-        // .clock_config = { .rmii = { .clock_mode = EMAC_CLK_OUT, .clock_gpio = EMAC_TX_CLK } }, // ESP32 WROVER IE 
-        // .clock_config = { .rmii = { .clock_mode = EMAC_CLK_EXT_IN, .clock_gpio = EMAC_APPL_CLK_OUT_GPIO } }, // ESP32 WROVER IE Input
+        .clock_config = { .rmii = { .clock_mode = EMAC_CLK_OUT, .clock_gpio = EMAC_CLK_OUT_180_GPIO } },
         .dma_burst_len = ETH_DMA_BURST_LEN_32 
     };
 
