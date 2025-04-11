@@ -103,15 +103,22 @@ extern void ethernet_setup(void);   // Your Ethernet initialization code
 #define PACKET_TYPE_DATA_READ  0xB1
 #define PACKET_TYPE_END_READ   0xB3
 
-// Extend your FSM states (update your fsm_state_t enum)
+#define PACKET_TYPE_START_COMPUTE 0xC0   
+#define PACKET_TYPE_POLL_COMPUTE  0xC1  
+#define PACKET_TYPE_WAIT_COMPUTE  0xC2   
+#define PACKET_TYPE_END_COMPUTE   0xC3   
+
+
 typedef enum {
     FSM_WAIT_START_WRITE,
-    FSM_WAIT_DATA_WRITE,    
-    FSM_WAIT_MID_WRITE,     
+    FSM_WAIT_DATA_WRITE,
+    FSM_WAIT_MID_WRITE,
     FSM_WAIT_END_WRITE,
-    FSM_WAIT_START_READ,    // <-- New: waiting for START_READ command
-    FSM_WAIT_DATA_READ,     // <-- New: actively sending file data from slave
-    FSM_WAIT_END_READ,      // <-- New: sending final checksum (or error code)
+    FSM_WAIT_START_READ,
+    FSM_WAIT_DATA_READ,
+    FSM_WAIT_END_READ,
+    FSM_WAIT_START_COMPUTE, 
+    FSM_WAIT_COMPUTE,       
     FSM_COMPLETE,
     FSM_ERROR
 } fsm_state_t;
@@ -783,6 +790,166 @@ static void tcp_server_task(void *pvParameters)
                     break;
                 }
                 
+                // ---------- Compute FSM handling ------------
+                case PACKET_TYPE_START_COMPUTE:
+                {
+                    if (state != FSM_WAIT_START_WRITE) {
+                        ESP_LOGE(COMM_TAG, "Unexpected START_COMPUTE packet in state %d", state);
+                        state = FSM_ERROR;
+                        break;
+                    }
+                    ESP_LOGI(COMM_TAG, "Received START_COMPUTE from router.");
+
+                    uint8_t filename_payload[48];
+                    if (recv_all(sock, filename_payload, sizeof(filename_payload)) != 0) {
+                        ESP_LOGE(COMM_TAG, "Failed to read START_READ filename payload");
+                        state = FSM_ERROR;
+                        break;
+                    }
+                    char filename[49];
+                    memcpy(filename, filename_payload, 48);
+                    filename[48] = '\0';
+                    ESP_LOGI(COMM_TAG, "START_READ: Filename: %s", filename);
+                    
+                    // Forward the read command to the slave via SPI.
+                    tx_buf[0] = PACKET_TYPE_START_COMPUTE;
+                    tx_buf[1] = 0x00;
+                    memcpy(tx_buf + 2, filename_payload, 48);
+
+                    if (spi_send_packet(t, tx_buf, rx_buf, NULL) != 0) {
+                        ESP_LOGE(COMM_TAG, "SPI START_COMPUTE transaction failed.");
+                        state = FSM_ERROR;
+                        break;
+                    }
+
+                    memset(tx_buf, 0, TRANSFER_SIZE);
+                    if (spi_send_packet(t, tx_buf, rx_buf, NULL) != 0) {
+                        ESP_LOGE(COMM_TAG, "SPI second transaction during START_COMPUTE failed.");
+                        state = FSM_ERROR;
+                        break;
+                    }
+
+                    uint8_t slave_response = rx_buf[0];
+                    if (slave_response == PACKET_TYPE_FUC) {
+                        ESP_LOGE(COMM_TAG, "Slave returned FUC during compute startup.");
+                        if (send(sock, rx_buf, 1, 0) < 0) {
+                            ESP_LOGE(COMM_TAG, "Failed to forward FUC to router.");
+                        }
+                        state = FSM_ERROR;
+                        break;
+                    } else if (slave_response == PACKET_TYPE_END_COMPUTE) {
+                        // Check for a flag (e.g. 0xFF means no such file).
+                        if (rx_buf[1] == 0xFF) {
+                            ESP_LOGE(COMM_TAG, "Slave reported compute error: no such file (flag 0xFF).");
+                            if (send(sock, rx_buf, 2, 0) < 0) {
+                                ESP_LOGE(COMM_TAG, "Failed to forward END_COMPUTE error to router.");
+                            }
+                            state = FSM_ERROR;
+                            break;
+                        } else {
+                            ESP_LOGE(COMM_TAG, "Unexpected END_COMPUTE received during compute startup.");
+                            state = FSM_ERROR;
+                            break;
+                        }
+                    } else if (slave_response == PACKET_TYPE_START_COMPUTE) {
+                        ESP_LOGI(COMM_TAG, "Slave confirmed compute start.");
+                        // Forward the slave's confirmation to the router.
+                        if (send(sock, rx_buf, 1, 0) < 0) {
+                            ESP_LOGE(COMM_TAG, "Failed to forward START_COMPUTE ACK to router.");
+                            state = FSM_ERROR;
+                            break;
+                        }
+                        // Transition to the compute polling state.
+                        state = FSM_WAIT_COMPUTE;
+                    } else {
+                        ESP_LOGE(COMM_TAG, "Unexpected slave response during compute startup: 0x%02X", slave_response);
+                        state = FSM_ERROR;
+                        break;
+                    }
+                    break;
+                }
+                case PACKET_TYPE_POLL_COMPUTE:
+                {
+                    if (state != FSM_WAIT_COMPUTE) {
+                        ESP_LOGE(COMM_TAG, "Unexpected POLL_COMPUTE packet in state %d", state);
+                        state = FSM_ERROR;
+                        break;
+                    }
+                    ESP_LOGI(COMM_TAG, "Received POLL_COMPUTE from router. Polling slave for compute status.");
+                    
+                    tx_buf[0] = PACKET_TYPE_POLL_COMPUTE;
+                    if (spi_send_packet(t, tx_buf, rx_buf, NULL) != 0) {
+                        ESP_LOGE(COMM_TAG, "SPI POLL_COMPUTE transaction failed.");
+                        state = FSM_ERROR;
+                        break;
+                    }
+                    
+                    if (rx_buf[0] == PACKET_TYPE_FUC) {
+                        ESP_LOGE(COMM_TAG, "Slave returned FUC during compute polling, first time itself");
+                        state = FSM_ERROR;
+                        break;
+                    } else if (rx_buf[0] == PACKET_TYPE_END_COMPUTE) { 
+                        uint8_t flag = rx_buf[1];
+                        if (flag == 0xFF) {
+                            ESP_LOGE(COMM_TAG, "Slave reports compute error during polling: no such file (flag 0xFF).");
+                            if (send(sock, rx_buf, 2, 0) < 0) {
+                                ESP_LOGE(COMM_TAG, "Failed to forward END_COMPUTE error to router.");
+                            }
+                            state = FSM_ERROR;
+                        } else {
+                            ESP_LOGI(COMM_TAG, "Compute complete; slave returning END_COMPUTE with flag: 0x%02X", flag);
+                            if (send(sock, rx_buf, 2, 0) < 0) {
+                                ESP_LOGE(COMM_TAG, "Failed to forward END_COMPUTE to router.");
+                                state = FSM_ERROR;
+                            } else {
+                                state = FSM_COMPLETE;
+                            }
+                        }
+                        break;
+                    }
+
+                    tx_buf[0] = PACKET_TYPE_POLL_COMPUTE;
+                    if (spi_send_packet(t, tx_buf, rx_buf, NULL) != 0) {
+                        ESP_LOGE(COMM_TAG, "SPI POLL_COMPUTE transaction failed.");
+                        state = FSM_ERROR;
+                        break;
+                    }
+
+                    uint8_t poll_response = rx_buf[0];
+                    if (poll_response == PACKET_TYPE_WAIT_COMPUTE) {
+                        ESP_LOGI(COMM_TAG, "Slave indicates compute is still in progress.");
+                        if (send(sock, rx_buf, 1, 0) < 0) {
+                            ESP_LOGE(COMM_TAG, "Failed to forward WAIT_COMPUTE to router.");
+                            state = FSM_ERROR;
+                        }
+                        // Stay in FSM_WAIT_COMPUTE state.
+                    } else if (poll_response == PACKET_TYPE_END_COMPUTE) {
+                        uint8_t flag = rx_buf[1];
+                        if (flag == 0xFF) {
+                            ESP_LOGE(COMM_TAG, "Slave reports compute error during polling: no such file (flag 0xFF).");
+                            if (send(sock, rx_buf, 2, 0) < 0) {
+                                ESP_LOGE(COMM_TAG, "Failed to forward END_COMPUTE error to router.");
+                            }
+                            state = FSM_ERROR;
+                        } else {
+                            ESP_LOGI(COMM_TAG, "Compute complete; slave returning END_COMPUTE with flag: 0x%02X", flag);
+                            if (send(sock, rx_buf, 2, 0) < 0) {
+                                ESP_LOGE(COMM_TAG, "Failed to forward END_COMPUTE to router.");
+                                state = FSM_ERROR;
+                            } else {
+                                state = FSM_COMPLETE;
+                            }
+                        }
+                    } else if (poll_response == PACKET_TYPE_FUC) {
+                        ESP_LOGE(COMM_TAG, "Slave returned FUC during compute polling.");
+                        state = FSM_ERROR;
+                    } else {
+                        ESP_LOGE(COMM_TAG, "Unexpected slave response during compute polling: 0x%02X", poll_response);
+                        state = FSM_ERROR;
+                    }
+                    break;
+                }
+
                 // --------------------------------------------------
                 case PACKET_TYPE_FUC: 
                 {

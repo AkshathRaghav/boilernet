@@ -106,12 +106,20 @@ static esp_err_t spi_slave_init(void)
 #define PACKET_TYPE_DATA_READ  0xB1 // new
 #define PACKET_TYPE_END_READ   0xB3 // new
 
+#define PACKET_TYPE_START_COMPUTE 0xC0   
+#define PACKET_TYPE_POLL_COMPUTE  0xC1   
+#define PACKET_TYPE_WAIT_COMPUTE  0xC2   
+#define PACKET_TYPE_END_COMPUTE   0xC3  
+
 typedef enum {
     FSM_WAIT_START_WRITE,
     FSM_WAIT_DATA_WRITE,
-    FSM_WAIT_START_READ,    // <-- New:
-    FSM_WAIT_DATA_READ,     // <-- New: 
-    FSM_WAIT_END_READ,      // <-- New: 
+    FSM_WAIT_START_READ,  
+    FSM_WAIT_DATA_READ,    
+    FSM_WAIT_END_READ,     
+    FSM_WAIT_START_COMPUTE,     
+    FSM_WAIT_COMPUTE_PROCESS,  
+    FSM_WAIT_END_COMPUTE,      
     FSM_COMPLETE,
     FSM_ERROR
 } fsm_state_t;
@@ -223,8 +231,10 @@ static void spi_handler_task(void *pvParameters) {
     spi_slave_transaction_t t_recv = {0};
     t_recv.length = TRANSFER_SIZE * 8;
 
-    int file_opened = 0; 
+    int file_opened = 0;
+    int num_computes = -1;
 
+    uint32_t compute_start_time = 0; 
 
     while (1) {
         memset(rx_buf, 0, TRANSFER_SIZE);
@@ -247,14 +257,11 @@ static void spi_handler_task(void *pvParameters) {
                  count, rx_buf[0], rx_buf[1], rx_buf[2], rx_buf[3], 
                  rx_buf[TRANSFER_SIZE - 2], rx_buf[TRANSFER_SIZE - 1]);
 
-        if ((tx_buf[1] == 0xFF) && (fsm_state == FSM_WAIT_END_READ)) { 
+        if (((tx_buf[1] == 0xFF) && (fsm_state == FSM_WAIT_END_READ)) || (fsm_state == FSM_WAIT_END_COMPUTE)) { 
             fsm_state = FSM_WAIT_START_WRITE;
             memset(tx_buf, 0, TRANSFER_SIZE);
-
+            num_computes = -1; 
         }
-
-        // if (fsm_state == FSM_WAIT_START_WRITE) { 
-        // }
 
         // ##########################################################
         uint8_t pkt_type = rx_buf[0];
@@ -340,17 +347,6 @@ static void spi_handler_task(void *pvParameters) {
                         fsm_state = FSM_COMPLETE;
                     }
                 }
-                break;
-            }
-            case PACKET_TYPE_FUC:
-            {
-                ESP_LOGE(COMM_TAG, "FUC packet received. Transaction failed.");
-                if (sd_file != NULL) {
-                    sdcard_close(sd_file);
-                    sdcard_delete(filename);
-                    sd_file = NULL;
-                }
-                fsm_state = FSM_ERROR;
                 break;
             }
 
@@ -467,7 +463,76 @@ static void spi_handler_task(void *pvParameters) {
                 break;
             }
 
+            // ---------- Compute FSM handling ------------
+            case PACKET_TYPE_START_COMPUTE:
+            {
+                if (fsm_state == FSM_WAIT_COMPUTE_PROCESS) { // dummy resend from network 
+                    continue; 
+                }
+                if (fsm_state != FSM_WAIT_START_WRITE) {
+                    ESP_LOGE(COMM_TAG, "Unexpected START_COMPUTE packet in state %d", fsm_state);
+                    fsm_state = FSM_ERROR;
+                    break;
+                }
+                if (num_computes != -1) { // We want to confirm with all the handshake lines that N computes are present. 
+                    ESP_LOGE(COMM_TAG, "Count never reset for finding compute nodes");
+                    fsm_state = FSM_ERROR;
+                    break;
+                }
+                num_computes = 4; 
+                if (num_computes == 0) { 
+                    ESP_LOGE(COMM_TAG, "No fucking compute nodes!!");
+                    fsm_state = FSM_ERROR;
+                    break;
+                } else { 
+                    ESP_LOGI(COMM_TAG, "Received START_COMPUTE; sending ACK.");
+                    tx_buf[0] = PACKET_TYPE_START_COMPUTE;  
+                    compute_start_time = xTaskGetTickCount();
+                    fsm_state = FSM_WAIT_COMPUTE_PROCESS;
+                    break;
+                }
+
+            }
+            case PACKET_TYPE_POLL_COMPUTE:
+            {
+                if (fsm_state == FSM_WAIT_START_WRITE) continue; 
+
+                if (fsm_state != FSM_WAIT_COMPUTE_PROCESS) {
+                    ESP_LOGE(COMM_TAG, "Unexpected POLL_COMPUTE packet in state %d", fsm_state);
+                    fsm_state = FSM_ERROR;
+                    break;
+                }
+
+                uint32_t now = xTaskGetTickCount();
+                if ((now - compute_start_time) >= pdMS_TO_TICKS(10000)) {
+                    tx_buf[0] = PACKET_TYPE_END_COMPUTE;
+                    tx_buf[1] = 0x00; 
+                    ESP_LOGI(COMM_TAG, "Compute processing complete; sending END_COMPUTE, but will have to resend.");
+                    fsm_state = FSM_WAIT_END_COMPUTE;
+                }
+                else
+                {
+                    tx_buf[0] = PACKET_TYPE_WAIT_COMPUTE;
+                    ESP_LOGI(COMM_TAG, "Compute is still processing; sending WAIT_COMPUTE.");
+                }
+                break;
+            }
+
             // --------------------------------------------------
+            case PACKET_TYPE_FUC:
+            {
+                ESP_LOGE(COMM_TAG, "FUC packet received. Transaction failed.");
+                if (sd_file != NULL) {
+                    sdcard_close(sd_file);
+                    sdcard_delete(filename);
+                    sd_file = NULL;
+                }
+                fsm_state = FSM_WAIT_START_WRITE;
+                computed_checksum = 0;
+                memset(filename, 0, sizeof(filename));
+                memset(tx_buf, 0, TRANSFER_SIZE);
+                break;
+            }
             default: 
             {
                 if ((pkt_type == 0x00)) { 
@@ -481,12 +546,10 @@ static void spi_handler_task(void *pvParameters) {
 
         // ##########################################################
         
-        if ((fsm_state != FSM_WAIT_START_READ) && (fsm_state != FSM_WAIT_DATA_READ) && (fsm_state != FSM_WAIT_END_READ) && !((fsm_state == FSM_COMPLETE) && (file_opened))) {
-            memcpy(tx_buf, rx_buf, TRANSFER_SIZE);
-        }
-        if ((fsm_state == FSM_COMPLETE) && (!file_opened)) { 
-            memcpy(tx_buf, rx_buf, TRANSFER_SIZE);
-        }
+        if ((fsm_state != FSM_WAIT_COMPUTE_PROCESS) && (fsm_state != FSM_WAIT_END_COMPUTE) &&
+            (fsm_state != FSM_WAIT_START_READ) && (fsm_state != FSM_WAIT_DATA_READ) && (fsm_state != FSM_WAIT_END_READ) && 
+            !((fsm_state == FSM_COMPLETE) && (file_opened)) && ((fsm_state == FSM_COMPLETE) && (!file_opened))
+        ) memcpy(tx_buf, rx_buf, TRANSFER_SIZE);
 
 
 
@@ -500,7 +563,8 @@ static void spi_handler_task(void *pvParameters) {
             memset(filename, 0, sizeof(filename));
             ESP_LOGI(COMM_TAG, "FSM completed successfully. Ready for next transaction.");
             fsm_state = FSM_WAIT_START_WRITE;
-        } else if (fsm_state == FSM_ERROR) {
+        } else if (fsm_state == FSM_ERROR)
+        {
             ESP_LOGE(COMM_TAG, "FSM encountered an error. Cleaning up and resetting.");
             if (sd_file != NULL) {
                 sdcard_close(sd_file);

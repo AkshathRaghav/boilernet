@@ -22,6 +22,12 @@ PACKET_TYPE_START_READ = 0xB0
 PACKET_TYPE_DATA_READ  = 0xB1
 PACKET_TYPE_END_READ   = 0xB3
 
+# Compute packet types 
+PACKET_TYPE_START_COMPUTE = 0xC0   
+PACKET_TYPE_POLL_COMPUTE  = 0xC1   
+PACKET_TYPE_WAIT_COMPUTE  = 0xC2   
+PACKET_TYPE_END_COMPUTE   = 0xC3  
+
 # Predefined error code for "file not found" (you can adjust the value as needed)
 FILE_NOT_FOUND_ERROR_CODE = 0xFF
 
@@ -63,7 +69,7 @@ def recvall(sock, n):
     return bytes(data)
 
 # --------------------------
-# Write Mode Helper Functions and FSM (existing)
+# Write Mode Helper Functions and FSM 
 # --------------------------
 def create_start_packet(filename):
     """
@@ -227,7 +233,7 @@ def fsm_image_transfer(sock, image_path):
         print("FSM (write): Transfer encountered an error.")
 
 # --------------------------
-# New Read Mode Helper Functions and FSM (without MID packets)
+# Read Mode Helper Functions and FSM
 # --------------------------
 def create_start_read_packet(filename):
     """
@@ -303,6 +309,106 @@ def fsm_file_read(sock, output_filename):
     print("FSM (read): File read transfer complete.")
 
 # --------------------------
+# Compute Mode Helper Functions and FSM 
+# --------------------------
+def create_start_compute_packet(filename):
+    """
+    Build the START_COMPUTE packet.
+    Structure: [Packet Type (1 byte)]
+    """
+    filename_bytes = filename.encode('utf-8')
+    if len(filename_bytes) > 48:
+        filename_bytes = filename_bytes[:48]
+    else:
+        filename_bytes = filename_bytes.ljust(48, b'\0')
+    return struct.pack("!B48s", PACKET_TYPE_START_COMPUTE, filename_bytes)
+
+def create_poll_compute_packet():
+    """
+    Build the POLL_COMPUTE packet.
+    Structure: [Packet Type (1 byte)]
+    """
+    return struct.pack("!B", PACKET_TYPE_POLL_COMPUTE)
+
+def fsm_compute(sock, filename):
+    # 1. Send START_COMPUTE to the master.
+    start_packet = create_start_compute_packet(filename)
+    sock.sendall(start_packet)
+    print("Sent START_COMPUTE packet to Master.")
+
+    # 2. Wait (up to 5 seconds) for an initial response.
+    sock.settimeout(2.5)
+    try:
+        response = sock.recv(2)  # Expecting at least the packet type, possibly a flag.
+    except socket.timeout:
+        print("Timeout waiting for compute response.")
+        return
+    if not response:
+        print("No response received for compute flow.")
+        return
+
+    resp_type = response[0]
+    if resp_type == PACKET_TYPE_FUC:
+        print("Compute error: Received FUC packet.")
+        return
+    elif resp_type == PACKET_TYPE_END_COMPUTE:
+        # If flag == 0xFF, that means no such file on the SD Card.
+        if len(response) >= 2:
+            flag = response[1]
+            if flag == 0xFF:
+                print("Compute error: No such file on the SD Card (flag 0xFF).")
+            else:
+                print("Compute ended unexpectedly. Flag:", hex(flag))
+        else:
+            print("Unexpected END_COMPUTE response without flag.")
+        return
+    elif resp_type == PACKET_TYPE_START_COMPUTE:
+        print("Compute process has been confirmed and started by Master/Slave.")
+    else:
+        print("Unexpected response type: 0x{:02X}".format(resp_type))
+        return
+
+    while True:
+        time.sleep(2.5)  
+        poll_packet = create_poll_compute_packet()
+        sock.sendall(poll_packet)
+        print("Sent POLL_COMPUTE packet, waiting for status...")
+
+        sock.settimeout(5)
+        try:
+            poll_response = sock.recv(2)
+        except socket.timeout:
+            print("Timeout waiting for compute poll response.")
+            return
+        if not poll_response:
+            print("No response received during polling.")
+            return
+
+        poll_resp_type = poll_response[0]
+        if poll_resp_type == PACKET_TYPE_FUC:
+            print("Compute error: Received FUC packet during polling.")
+            return
+        elif poll_resp_type == PACKET_TYPE_END_COMPUTE:
+            # Check the flag.
+            if len(poll_response) >= 2:
+                flag = poll_response[1]
+                if flag == 0xFF:
+                    print("Compute error during polling: No such file on SD Card (flag 0xFF).")
+                    return
+                else:
+                    print("Compute process completed successfully. Flag:", hex(flag))
+                    return
+            else:
+                print("Unexpected END_COMPUTE response in polling without flag.")
+                return
+        elif poll_resp_type == PACKET_TYPE_WAIT_COMPUTE:
+            print("Compute is still in progress... waiting...")
+            # Continue polling.
+        else:
+            print("Unexpected poll response: 0x{:02X}".format(poll_resp_type))
+            return
+
+# --------------------------
 # Main function: select mode based on arguments
 # --------------------------
 def main():
@@ -326,8 +432,10 @@ def main():
             fsm_image_transfer(sock, file_arg)
         elif mode == "read":
             fsm_file_read(sock, file_arg)
+        elif mode == "compute": 
+            fsm_compute(sock, file_arg)
         else:
-            print("Invalid mode. Use 'write' or 'read'.")
+            print("Invalid mode. Use 'write' or 'read' or 'compute'.")
             sys.exit(1)
         end_time = time.time()
         print("Total Time: ", end_time - start_time)
