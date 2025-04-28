@@ -6,3 +6,13 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+.vscode/ 
+full-imagenet/*
+models/*
+quantized_models/*
+build/
+managed_components/
+__pycache__/
+venv/
+.venv/
