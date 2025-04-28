@@ -60,6 +60,11 @@
 #include "lwip/sockets.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "sdmmc_cmd.h"
+#include "driver/sdspi_host.h"
+#include "esp_vfs_fat.h"
+
+// ################################################################
 
 #define ETH_PHY_ADDR             1
 #define ETH_PHY_RST_GPIO        -1          // not connected
@@ -90,7 +95,8 @@ static const char *COMM_TAG = "TCP_SOCKET";
 
 extern void ethernet_setup(void); 
 
-// Packet type definitions
+// ################################################################
+
 #define PACKET_TYPE_START_WRITE 0xA0
 #define PACKET_TYPE_DATA_WRITE  0xA1
 #define PACKET_TYPE_MID_WRITE   0xA2
@@ -128,24 +134,46 @@ typedef enum {
 
 // ################################################################
 
-#define PIN_NUM_MOSI  13
-#define PIN_NUM_MISO  12
-#define PIN_NUM_CLK   14
+#define SD_NUM_MOSI     23
+#define SD_NUM_MISO     19
+#define SD_NUM_CLK     18
+#define SD_NUM_CS       4
 
-#define PIN_NUM_CS_1   15
-#define PIN_NUM_CS_0    33
+#define MOUNT_POINT "/sdcard"
 
-#define GPIO_HANDSHAKE_1 36
-#define GPIO_HANDSHAKE_0 39
-
-
-#define TRANSFER_SIZE 2048
-
-#define CMD_VALID   0xA6  
-#define CMD_INVALID 0xB1  
-
-#define MAX_RETRY 5
-
-#define SPI_HOST_TYPE HSPI_HOST
+#define SD_HOST   VSPI_HOST   
 
 // ################################################################
+
+#define SWITCH_NUM_MOSI  13
+#define SWITCH_NUM_MISO  12
+#define SWITCH_NUM_CLK   14
+
+#define SWITCH_NUM_CS_0   15
+#define SWITCH_NUM_CS_1    33
+
+#define SWITCH_HANDSHAKE_0 36
+#define SWITCH_HANDSHAKE_1 39
+
+static const int switch_handshake_pins[] = {
+    SWITCH_HANDSHAKE_0,
+    SWITCH_HANDSHAKE_1
+};
+
+static const int switch_cs_pins[] = {
+    SWITCH_NUM_CS_0,
+    SWITCH_NUM_CS_1
+};
+
+
+#define NUM_SWITCH_NODES  (sizeof(switch_cs_pins)/sizeof(switch_cs_pins[0]))
+
+static spi_device_handle_t switch_handles[NUM_SWITCH_NODES];
+
+#define TRANSFER_SIZE 2048
+#define MAX_RETRY 5
+
+#define SWITCH_HOST   HSPI_HOST   
+
+// ################################################################
+

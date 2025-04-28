@@ -4,12 +4,12 @@
 
 void my_post_setup_cb(spi_slave_transaction_t *trans)
 {
-    gpio_set_level(GPIO_HANDSHAKE, 1);
+    gpio_set_level(NETWORK_HANDSHAKE, 1);
 }
 
 void my_post_trans_cb(spi_slave_transaction_t *trans)
 {
-    gpio_set_level(GPIO_HANDSHAKE, 0);
+    gpio_set_level(NETWORK_HANDSHAKE, 0);
 }
 
 void handshake_init_slave(void)
@@ -17,7 +17,7 @@ void handshake_init_slave(void)
     gpio_config_t io_conf = {
         .intr_type = GPIO_INTR_DISABLE,
         .mode = GPIO_MODE_OUTPUT,
-        .pin_bit_mask = (1ULL << GPIO_HANDSHAKE),
+        .pin_bit_mask = (1ULL << NETWORK_HANDSHAKE),
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
         .pull_up_en = GPIO_PULLUP_DISABLE,
     };
@@ -31,9 +31,9 @@ static esp_err_t spi_slave_init(void)
     handshake_init_slave();
 
     spi_bus_config_t buscfg = {
-        .mosi_io_num = GPIO_MOSI,
-        .miso_io_num = GPIO_MISO,
-        .sclk_io_num = GPIO_SCLK,
+        .mosi_io_num = NETWORK_MOSI,
+        .miso_io_num = NETWORK_MISO,
+        .sclk_io_num = NETWORK_SCLK,
         .quadwp_io_num = -1,
         .quadhd_io_num = -1,
         .max_transfer_sz = TRANSFER_SIZE,
@@ -41,18 +41,18 @@ static esp_err_t spi_slave_init(void)
 
     spi_slave_interface_config_t slvcfg = {
         .mode = 0,
-        .spics_io_num = GPIO_CS,
+        .spics_io_num = NETWORK_CS,
         .queue_size = 2,
         .flags = 0,
         .post_setup_cb = my_post_setup_cb,
         .post_trans_cb = my_post_trans_cb
     };
 
-    gpio_set_pull_mode(GPIO_MOSI, GPIO_PULLUP_ONLY);
-    gpio_set_pull_mode(GPIO_SCLK, GPIO_PULLUP_ONLY);
-    gpio_set_pull_mode(GPIO_CS,   GPIO_PULLUP_ONLY);
+    gpio_set_pull_mode(NETWORK_MOSI, GPIO_PULLUP_ONLY);
+    gpio_set_pull_mode(NETWORK_SCLK, GPIO_PULLUP_ONLY);
+    gpio_set_pull_mode(NETWORK_CS,   GPIO_PULLUP_ONLY);
 
-    ret = spi_slave_initialize(RCV_HOST, &buscfg, &slvcfg, SPI_DMA_CH_AUTO);
+    ret = spi_slave_initialize(NETWORK_HOST, &buscfg, &slvcfg, SPI_DMA_CH_AUTO);
     return ret; 
 }
 
@@ -68,12 +68,12 @@ static esp_err_t SDCardInit(void) {
     sdmmc_card_t *card;
     const char mount_point[] = MOUNT_POINT;
     sdmmc_host_t host = SDSPI_HOST_DEFAULT();
-    host.slot = RCV_HOST2; 
+    host.slot = SD_HOST; 
 
     spi_bus_config_t bus_cfg = {
-        .mosi_io_num = PIN_NUM_MOSI,
-        .miso_io_num = PIN_NUM_MISO,
-        .sclk_io_num = PIN_NUM_CLK,
+        .mosi_io_num = SD_NUM_MOSI,
+        .miso_io_num = SD_NUM_MISO,
+        .sclk_io_num = SD_NUM_CLK,
         .quadwp_io_num = -1,
         .quadhd_io_num = -1,
         .max_transfer_sz = 2048,
@@ -87,7 +87,7 @@ static esp_err_t SDCardInit(void) {
     }
 
     sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
-    slot_config.gpio_cs = PIN_NUM_CS;
+    slot_config.gpio_cs = SD_NUM_CS;
     slot_config.host_id = host.slot;
 
     ret = esp_vfs_fat_sdspi_mount(mount_point, &host, &slot_config, &mount_config, &card);
@@ -145,7 +145,7 @@ esp_err_t compute_spi_master_init(void)
 
     for (int i = 0; i < NUM_COMPUTE_BLADES; i++) {
         devcfg.spics_io_num = compute_cs_pins[i];
-        esp_err_t ret = spi_bus_add_device(RCV_HOST2, &devcfg, &compute_handles[i]);
+        esp_err_t ret = spi_bus_add_device(SD_HOST, &devcfg, &compute_handles[i]);
         if (ret != ESP_OK) {
             ESP_LOGW(COMM_TAG,
                      "Blade %d not registered (CS pin %d): %s",
@@ -387,9 +387,9 @@ cleanup:
 // ##############################################################################
 
 static void spi_handler_task(void *pvParameters) { 
-    uint8_t *rx_buf_parent = spi_bus_dma_memory_alloc(RCV_HOST, TRANSFER_SIZE, 0);
-    uint8_t *rx_buf = spi_bus_dma_memory_alloc(RCV_HOST, TRANSFER_SIZE, 0);
-    uint8_t *tx_buf = spi_bus_dma_memory_alloc(RCV_HOST, TRANSFER_SIZE, 0);
+    uint8_t *rx_buf_parent = spi_bus_dma_memory_alloc(NETWORK_HOST, TRANSFER_SIZE, 0);
+    uint8_t *rx_buf = spi_bus_dma_memory_alloc(NETWORK_HOST, TRANSFER_SIZE, 0);
+    uint8_t *tx_buf = spi_bus_dma_memory_alloc(NETWORK_HOST, TRANSFER_SIZE, 0);
 
     if (!rx_buf || !tx_buf) {
         ESP_LOGE(COMM_TAG, "Failed to allocate DMA buffers");
@@ -425,7 +425,7 @@ static void spi_handler_task(void *pvParameters) {
         t_recv.tx_buffer = tx_buf;
         t_recv.rx_buffer = rx_buf;
 
-        esp_err_t ret = spi_slave_transmit(RCV_HOST, &t_recv, portMAX_DELAY);
+        esp_err_t ret = spi_slave_transmit(NETWORK_HOST, &t_recv, portMAX_DELAY);
         if (ret != ESP_OK) {
             ESP_LOGE(COMM_TAG, "Receive transaction failed: %s", esp_err_to_name(ret));
             continue;
@@ -445,8 +445,8 @@ static void spi_handler_task(void *pvParameters) {
                 fsm_state = FSM_ERROR; 
             }
 
-            uint8_t *rx_buf2  = spi_bus_dma_memory_alloc(RCV_HOST2, TRANSFER_SIZE, 0);
-            uint8_t *tx_buf2 = spi_bus_dma_memory_alloc(RCV_HOST2, TRANSFER_SIZE, 0);
+            uint8_t *rx_buf2  = spi_bus_dma_memory_alloc(SD_HOST, TRANSFER_SIZE, 0);
+            uint8_t *tx_buf2 = spi_bus_dma_memory_alloc(SD_HOST, TRANSFER_SIZE, 0);
             compute_fsm_process(
                 sd_file,
                 result_filename,

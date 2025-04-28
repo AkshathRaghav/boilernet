@@ -17,56 +17,7 @@
 #include <ctype.h>
 #include <stdbool.h>
 
-
 // ##############################################################################
-
-static const char *COMM_TAG = "SPI_SLAVE";
-
-#define RCV_HOST    HSPI_HOST
-#define RCV_HOST2   VSPI_HOST   
-
-#define PIN_NUM_MOSI     23
-#define PIN_NUM_MISO     19
-#define PIN_NUM_CLK     18
-#define PIN_NUM_CS       4
-
-
-#define GPIO_MOSI  13
-#define GPIO_MISO  12
-#define GPIO_SCLK   14
-#define GPIO_CS    15
-
-#define GPIO_HANDSHAKE 33
-
-#define TRANSFER_SIZE 2048
-
-#define COMPUTE_HS_0 36
-#define COMPUTE_HS_1 39 
-#define COMPUTE_HS_2 26
-#define COMPUTE_HS_3 27 
-
-#define COMPUTE_CS_0  5
-#define COMPUTE_CS_1  21
-#define COMPUTE_CS_2  22
-#define COMPUTE_CS_3  25
-
-
-static const int compute_cs_pins[] = {
-    COMPUTE_CS_0,
-    COMPUTE_CS_1,
-    COMPUTE_CS_2,
-    COMPUTE_CS_3
-};
-
-static const int compute_handshake_pins[] = {
-    COMPUTE_HS_0,
-    COMPUTE_HS_1,
-    COMPUTE_HS_2,
-    COMPUTE_HS_3
-};
-
-// ##############################################################################
-
 
 #define PACKET_TYPE_START_WRITE 0xA0
 #define PACKET_TYPE_DATA_WRITE  0xA1
@@ -115,7 +66,55 @@ typedef enum
 
 // ##############################################################################
 
+
+static const char *COMM_TAG = "SPI_SLAVE";
+
 #define MOUNT_POINT "/sdcard"
+
+#define SD_HOST   VSPI_HOST   
+
+#define SD_NUM_MOSI     23
+#define SD_NUM_MISO     19
+#define SD_NUM_CLK     18
+#define SD_NUM_CS       4
+
+// ##############################################################################
+
+#define TRANSFER_SIZE 2048
+
+#define NETWORK_HOST    HSPI_HOST
+
+#define NETWORK_MOSI  13
+#define NETWORK_MISO  12
+#define NETWORK_SCLK   14
+#define NETWORK_CS    15
+
+#define NETWORK_HANDSHAKE 33
+
+#define COMPUTE_HS_0 36
+#define COMPUTE_HS_1 39 
+#define COMPUTE_HS_2 26
+#define COMPUTE_HS_3 27 
+
+#define COMPUTE_CS_0  5
+#define COMPUTE_CS_1  21
+#define COMPUTE_CS_2  22
+#define COMPUTE_CS_3  25
+
+
+static const int compute_handshake_pins[] = {
+    COMPUTE_HS_0,
+    COMPUTE_HS_1,
+    COMPUTE_HS_2,
+    COMPUTE_HS_3
+};
+
+static const int compute_cs_pins[] = {
+    COMPUTE_CS_0,
+    COMPUTE_CS_1,
+    COMPUTE_CS_2,
+    COMPUTE_CS_3
+};
 
 #define NUM_COMPUTE_BLADES  (sizeof(compute_cs_pins)/sizeof(compute_cs_pins[0]))
 
@@ -141,3 +140,6 @@ static spi_device_handle_t compute_handles[NUM_COMPUTE_BLADES];
         }                                               \
         }                                                 \
     } while (0)
+
+// ##############################################################################
+
