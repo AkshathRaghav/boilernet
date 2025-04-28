@@ -1,5 +1,4 @@
 # boilerNAS: A Compute-Enabled Mini-NAS
----
 Credits: Akshath Raghav Ravikiran, Gautum Kottayil Nambiar, Aneesh Reddy Poddutur, Gokulkrishnan Harikrishnan
 
 <div align="center">

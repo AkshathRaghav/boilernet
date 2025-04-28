@@ -1,33 +1,6 @@
-#include <stdio.h>
-#include <string.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_log.h"
-#include "esp_err.h"
-#include "esp_timer.h"
-#include "sdkconfig.h"
-#include "lodepng.h"
-#include "esp_heap_caps.h"
-extern "C" {
-  #include "driver/gpio.h"
-  #include "driver/spi_slave.h"
-  #include "hal/cache_hal.h"    
-}
-
-
-// TFLM includes
-#include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
-#include "tensorflow/lite/micro/tflite_bridge/micro_error_reporter.h"
-#include "tensorflow/lite/micro/micro_interpreter.h"
-#include "tensorflow/lite/schema/schema_generated.h"
-#include "tensorflow/lite/micro/micro_profiler.h"
-
-// Model header (const array lives in Flash/RODATA)
-#include "dogs_model_data.h"
+#include "main.h"
 
 // ##############################################################################
-
-#define BLINK_GPIO GPIO_NUM_32
 
 void turn_on() { 
   vTaskDelay(pdMS_TO_TICKS(10));
@@ -51,34 +24,6 @@ static void configure_led(void)
     };
     gpio_config(&led_conf);
 }
-
-// ##############################################################################
-
-#define GPIO_MOSI    GPIO_NUM_13
-#define GPIO_MISO    GPIO_NUM_12
-#define GPIO_SCLK    GPIO_NUM_14
-#define GPIO_CS      GPIO_NUM_15
-
-#define GPIO_HANDSHAKE GPIO_NUM_2
-#define TRANSFER_SIZE   2048
-#define COMM_TAG  "BLADE_SPI"
-
-// ─── Packet types from the switch ───
-#define PACKET_TYPE_START_DATA_TO_BLADE   0xD0
-#define PACKET_TYPE_DATA_TO_BLADE         0xD1
-#define PACKET_TYPE_END_DATA_TO_BLADE     0xD2
-#define PACKET_TYPE_GET_RESULT_FROM_BLADE 0xD3
-#define PACKET_TYPE_CLEAR_BLADE 0xDF
-
-#define PACKET_TYPE_FUC   0xA4
-
-// ─── Blade FSM states ───
-typedef enum {
-    BLADE_FSM_WAIT_START,
-    BLADE_FSM_RECEIVE,
-    BLADE_FSM_PROCESS,
-    BLADE_FSM_ERROR
-} blade_fsm_t;
 
 // ##############################################################################
 
@@ -127,20 +72,6 @@ esp_err_t spi_slave_init(void) {
     return spi_slave_initialize(HSPI_HOST, &buscfg, &slvcfg, SPI_DMA_CH_AUTO);
 }
 
-// ##############################################################################
-
-#define BUF_SIZE     (200 * 1024)
-#define IMG_SIZE        224
-#define NUM_CLASSES     5
-#define TENSOR_ARENA_SZ (800 * 1024)  
-
-const char* dog_labels[NUM_CLASSES] = {
-  "German Shepherd",
-  "Labrador Retriever",
-  "Pug",
-  "Chihuahua",
-  "Poodle"
-};
 
 // ##############################################################################
 
@@ -166,9 +97,7 @@ void blade_spi_task(void *pvParameters) {
 
     turn_off();
     turn_on(); 
-    static tflite::MicroErrorReporter micro_error_reporter;
-    tflite::ErrorReporter* err_reporter = &micro_error_reporter;
-    const tflite::Model* model = tflite::GetModel(dogs_model_tflite);
+    const tflite::Model* model = tflite::GetModel(model_tflite);
 
     static tflite::MicroMutableOpResolver<6> resolver;  
     resolver.AddFullyConnected();
@@ -178,18 +107,9 @@ void blade_spi_task(void *pvParameters) {
     resolver.AddDepthwiseConv2D();
     resolver.AddAdd();
 
-    static tflite::MicroProfiler profiler;
-
     uint8_t* tensor_arena = (uint8_t*)heap_caps_malloc(TENSOR_ARENA_SZ, MALLOC_CAP_SPIRAM);
-    tflite::MicroAllocator* allocator = tflite::MicroAllocator::Create(tensor_arena, TENSOR_ARENA_SZ);
 
-    tflite::MicroInterpreter interpreter(
-        model,
-        resolver,
-        tensor_arena, 
-        TENSOR_ARENA_SZ,
-        nullptr,
-        &profiler);
+    tflite::MicroInterpreter interpreter(model, resolver, tensor_arena, TENSOR_ARENA_SZ, nullptr, nullptr);
 
     ESP_LOGI(COMM_TAG, "Max internal used: %u", heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
 
@@ -197,7 +117,6 @@ void blade_spi_task(void *pvParameters) {
       ESP_LOGE(COMM_TAG, "AllocateTensors() failed");
       return;
     }
-
 
     spi_slave_transaction_t t_recv = {0};
     t_recv.length = TRANSFER_SIZE * 8;
@@ -392,7 +311,7 @@ void blade_spi_task(void *pvParameters) {
                     if (out_data[i] > out_data[best]) best = i;
                 }
 
-                const char* res = dog_labels[best];
+                const char* res = model_labels[best];
                 ESP_LOGI(COMM_TAG, "Result: %s", res);
 
                 memset(tx_buf, 0, TRANSFER_SIZE);
@@ -407,7 +326,7 @@ void blade_spi_task(void *pvParameters) {
                       "\"pred\":\"%s\","
                       "\"time\":%lld,"
                       "\"scores\":{",
-                    dog_labels[best],
+                    model_labels[best],
                     total_time
                 );
 
@@ -415,7 +334,7 @@ void blade_spi_task(void *pvParameters) {
                   // float conf = (out_data[i] - zero_point) * scale;
                   pos += snprintf(p + pos, TRANSFER_SIZE - 3 - pos,
                     "\"%s\":%.3f%s",
-                    dog_labels[i],
+                    model_labels[i],
                     (float) out_data[i],
                     (i < NUM_CLASSES - 1) ? "," : ""
                   );
@@ -423,7 +342,6 @@ void blade_spi_task(void *pvParameters) {
 
                 pos += snprintf(p + pos, TRANSFER_SIZE - 3 - pos, "}}\n");
 
-                int payload_len = pos;  
                 tx_buf[1] = (pos >> 8) & 0xFF;
                 tx_buf[2] = (pos     ) & 0xFF;
 

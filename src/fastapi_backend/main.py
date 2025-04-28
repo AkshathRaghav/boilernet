@@ -13,8 +13,6 @@ import base64
 ##########################
 # Data Classes
 ##########################
-
-
 class Task(BaseModel):
     task_id: int
     job_identifier: str  # Provided by front end; unique per session/job

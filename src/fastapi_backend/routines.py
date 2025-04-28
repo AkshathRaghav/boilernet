@@ -248,7 +248,6 @@ def fsm_image_transfer(sock, image_path, user_id):
                     state = State.COMPLETE
                 elif ack[0] == PACKET_TYPE_FUC:
                     print("Got PACKET_TYPE_FUC")
-                    if ack[1] == 0xFF: print("WAY SELECTION FAILED!")
                     state = State.ERROR
                 else:
                     print("WRONG ACK GOT: ", ack)
@@ -393,7 +392,6 @@ def fsm_compute(sock, filename):
     resp_type = response[0]
     if resp_type == PACKET_TYPE_FUC:
         print("Compute error: Received FUC packet.")
-        if response[1] == 0xFF: print("WAY SELECTION FAILED!")
         return
     elif resp_type == PACKET_TYPE_END_COMPUTE:
         if len(response) >= 2 and response[1] == 0xFF:
@@ -433,7 +431,6 @@ def fsm_compute(sock, filename):
         poll_type = poll_response[0]
         if poll_type == PACKET_TYPE_FUC:
             print("Compute error: Received FUC packet during polling.")
-            if poll_response[1] == 0xFF: print("WAY SELECTION FAILED!")
             return
         elif poll_type == PACKET_TYPE_END_COMPUTE:
             if len(poll_response) >= 2 and poll_response[1] == 0xFF:
