@@ -1,80 +1,6 @@
-#include <stdio.h>
-#include <string.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "driver/gpio.h"
-
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include "esp_log.h"
-#include "esp_err.h"
-#include "driver/spi_slave.h"
-#include "driver/spi_master.h"
-#include "esp_vfs_fat.h"
-#include "sdmmc_cmd.h"
-#include "driver/sdspi_host.h"
-#include <ctype.h>
-#include <stdbool.h>
-
+#include "internal_switch.h"
 
 // ##############################################################################
-
-static const char *COMM_TAG = "SPI_SLAVE";
-
-#define RCV_HOST    HSPI_HOST
-#define RCV_HOST2   VSPI_HOST   
-
-#define PIN_NUM_MOSI     23
-#define PIN_NUM_MISO     19
-#define PIN_NUM_CLK     18
-#define PIN_NUM_CS       4
-
-// #define PIN_NUM_MISO  12
-// #define PIN_NUM_MOSI  13
-// #define PIN_NUM_CLK   14
-// #define PIN_NUM_CS    15
-
-#define GPIO_MOSI  13
-#define GPIO_MISO  12
-#define GPIO_SCLK   14
-#define GPIO_CS    15
-
-// #define GPIO_MOSI     23
-// #define GPIO_MISO     19
-// #define GPIO_SCLK     18
-// #define GPIO_CS       5
-
-#define GPIO_HANDSHAKE 33
-
-// #define GPIO_HANDSHAKE 4
-
-#define TRANSFER_SIZE 2048
-
-#define COMPUTE_HS_0 36
-#define COMPUTE_HS_1 39 
-#define COMPUTE_HS_2 26
-#define COMPUTE_HS_3 27 
-
-#define COMPUTE_CS_0  5
-#define COMPUTE_CS_1  21
-#define COMPUTE_CS_2  22
-#define COMPUTE_CS_3  25
-
-
-static const int compute_cs_pins[] = {
-    COMPUTE_CS_0,
-    COMPUTE_CS_1,
-    COMPUTE_CS_2,
-    COMPUTE_CS_3
-};
-
-static const int compute_handshake_pins[] = {
-    COMPUTE_HS_0,
-    COMPUTE_HS_1,
-    COMPUTE_HS_2,
-    COMPUTE_HS_3
-};
 
 void my_post_setup_cb(spi_slave_transaction_t *trans)
 {
@@ -122,7 +48,6 @@ static esp_err_t spi_slave_init(void)
         .post_trans_cb = my_post_trans_cb
     };
 
-    // Enable pull-ups on SPI lines so that the signals are stable when no master is connected.
     gpio_set_pull_mode(GPIO_MOSI, GPIO_PULLUP_ONLY);
     gpio_set_pull_mode(GPIO_SCLK, GPIO_PULLUP_ONLY);
     gpio_set_pull_mode(GPIO_CS,   GPIO_PULLUP_ONLY);
@@ -131,59 +56,7 @@ static esp_err_t spi_slave_init(void)
     return ret; 
 }
 
-
-
 // ##############################################################################
-
-
-#define PACKET_TYPE_START_WRITE 0xA0
-#define PACKET_TYPE_DATA_WRITE  0xA1
-#define PACKET_TYPE_MID_WRITE   0xA2
-#define PACKET_TYPE_END_WRITE   0xA3
-
-#define PACKET_TYPE_START_READ 0xB0 
-#define PACKET_TYPE_DATA_READ  0xB1 
-#define PACKET_TYPE_END_READ   0xB3 
-
-#define PACKET_TYPE_START_COMPUTE 0xC0   
-#define PACKET_TYPE_POLL_COMPUTE  0xC1   
-#define PACKET_TYPE_WAIT_COMPUTE  0xC2   
-#define PACKET_TYPE_END_COMPUTE   0xC3  
-
-#define PACKET_TYPE_START_DATA_TO_BLADE 0xD0
-#define PACKET_TYPE_DATA_TO_BLADE 0xD1
-#define PACKET_TYPE_END_DATA_TO_BLADE 0xD2
-#define PACKET_TYPE_GET_RESULT_FROM_BLADE 0xD3
-#define PACKET_TYPE_CLEAR_BLADE 0xDF
-
-#define PACKET_TYPE_DELETE 0xE0
-#define PACKET_TYPE_DELETE_RET 0xE1
-
-#define PACKET_TYPE_FUC   0xA4
-
-typedef enum {
-    FSM_WAIT_START_WRITE,
-    FSM_WAIT_DATA_WRITE,
-    FSM_WAIT_START_READ,  
-    FSM_WAIT_DATA_READ,    
-    FSM_WAIT_END_READ,     
-    FSM_WAIT_START_COMPUTE,    
-    FSM_WAIT_COMPUTE_PROCESS,  
-    FSM_WAIT_END_COMPUTE,      
-    FSM_COMPLETE,
-    FSM_ERROR
-} fsm_state_t;
-
-typedef enum
-{
-    FSM_IDLE, 
-    FSM_SEND_DATA_TO_BLADE,  // NEW
-    FSM_GET_DATA_FROM_BLADE, // NEW
-} compute_fsm_state_t; 
-
-// ##############################################################################
-
-#define MOUNT_POINT "/sdcard"
 
 static esp_err_t SDCardInit(void) {
     esp_vfs_fat_sdmmc_mount_config_t mount_config = {
@@ -260,10 +133,6 @@ static void sdcard_delete(const char *filename) {
 
 // ##############################################################################
 
-#define NUM_COMPUTE_BLADES  (sizeof(compute_cs_pins)/sizeof(compute_cs_pins[0]))
-
-static spi_device_handle_t compute_handles[NUM_COMPUTE_BLADES];
-
 esp_err_t compute_spi_master_init(void)
 {
 
@@ -332,17 +201,14 @@ bool make_result_filename(const char *in, char *out, size_t out_sz) {
     const char *suffix = "_results.txt";
     size_t suffix_len = strlen(suffix);
 
-    // need base_len + suffix_len + null terminator
     if (base_len + suffix_len + 1 > out_sz) {
         return false;
     }
 
-    // 1) copy base name, lower-case
     for (size_t i = 0; i < base_len; i++) {
         out[i] = (char) tolower((unsigned char)in[i]);
     }
-    // 2) append suffix
-    memcpy(out + base_len, suffix, suffix_len + 1);  // includes '\0'
+    memcpy(out + base_len, suffix, suffix_len + 1); 
 
     return true;
 }
@@ -387,28 +253,6 @@ void compute_fsm_process(FILE *sd_file,
         return;
     }
 
-    #define TIMEOUT_MS   15000
-    #define CHECK_TIMEOUT(blade)                                                     \
-        do {                                                                         \
-          if ((xTaskGetTickCount() - *compute_start_tick) > pdMS_TO_TICKS(TIMEOUT_MS)) { \
-            ESP_LOGE(COMM_TAG, "Handshake timeout for blade %d", blade);             \
-            passed[blade] = false;                                                   \
-            goto cleanup;                                                            \
-          }                                                                          \
-        } while (0)
-
-    // Error recording macro
-    #define RECORD_FAILED(blade)                             \
-        do {                                                \
-          if (!passed[blade]) {                             \
-            if (write_failed(result_file, blade) < 0) {     \
-              *outer_fsm_state = FSM_ERROR;                 \
-              goto cleanup;                                 \
-            }                                               \
-          }                                                 \
-        } while (0)
-
-
     if (fseek(sd_file, 0, SEEK_SET) != 0) {
         ESP_LOGE(COMM_TAG, "Failed to rewind SD file");
         *outer_fsm_state = FSM_ERROR;
@@ -429,7 +273,7 @@ void compute_fsm_process(FILE *sd_file,
         } else {
             passed[blade] = true; 
         }
-        vTaskDelay(pdMS_TO_TICKS(2)); // force 2 ticks
+        vTaskDelay(pdMS_TO_TICKS(2)); 
     }
 
     int count = 0; 
@@ -472,7 +316,7 @@ void compute_fsm_process(FILE *sd_file,
         }
     }
 
-    vTaskDelay(pdMS_TO_TICKS(5000)); // wait 5 seconds
+    vTaskDelay(pdMS_TO_TICKS(5000)); 
     *compute_start_tick = xTaskGetTickCount();
 
     result_file = sdcard_open(result_filename, "w");
@@ -537,8 +381,6 @@ cleanup:
     if (sd_file) sdcard_close(sd_file);
     if (result_file) sdcard_close(result_file);
     free(passed);
-#undef CHECK_TIMEOUT
-#undef TIMEOUT_MS
 }
 
 

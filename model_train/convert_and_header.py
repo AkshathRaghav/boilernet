@@ -5,7 +5,6 @@ import tensorflow as tf
 def representative_data_gen(data_dir, subset_synsets, image_size, num_samples=100):
     """Yields representative samples for INT8 quantization from the specified subset."""
     image_paths = []
-    # Collect image paths from the train folders of each synset in the subset
     for syn in subset_synsets:
         syn_dir = os.path.join(data_dir, "train", syn)
         if os.path.isdir(syn_dir):
@@ -28,22 +27,15 @@ def representative_data_gen(data_dir, subset_synsets, image_size, num_samples=10
         yield [img]
 
 def quantize_model(saved_model_dir, tflite_path, data_dir, subset_synsets, image_size):
-    # Load converter
     keras_model = tf.keras.models.load_model(saved_model_dir)  # works with .keras or .h5
     converter = tf.lite.TFLiteConverter.from_keras_model(keras_model)
 
-    # converter = tf.lite.TFLiteConverter.from_saved_model(saved_model_dir)
-    
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
     converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
     converter.inference_input_type = tf.int8
     converter.inference_output_type = tf.int8
-    # Set representative dataset
-    converter.representative_dataset = lambda: representative_data_gen(
-        data_dir, subset_synsets, image_size)
-    # Convert
+    converter.representative_dataset = lambda: representative_data_gen(data_dir, subset_synsets, image_size)
     tflite_model = converter.convert()
-    # Save
     os.makedirs(os.path.dirname(tflite_path), exist_ok=True)
     with open(tflite_path, 'wb') as f:
         f.write(tflite_model)
@@ -112,4 +104,4 @@ if __name__ == "__main__":
     main()
 
 
-# python convert_and_header.py --saved_model_dir "/home/araviki/workbench/boilernet/internal_switches/spi_test/compute_samples/models/dogs_mobilenet_v2_best.keras"  --data_dir "/home/araviki/workbench/boilernet/internal_switches/spi_test/compute_samples/full-imagenet/imagenet" --subset "dogs" --tflite_path "/home/araviki/workbench/boilernet/internal_switches/spi_test/compute_samples/models/dogs_int8.tflite" --header_path ./dogs_model_data.cc  --array_name ogs_model_tflite  --image_size 224
+# python convert_and_header.py --saved_model_dir "/home/araviki/workbench/boilernet/model_train/models/dogs_mobilenet_v2_best.keras"  --data_dir "/home/araviki/workbench/boilernet/model_train/imagenet" --subset "dogs" --tflite_path "/home/araviki/workbench/boilernet/model_train/models/dogs_int8.tflite" --header_path ./dogs_model_data.cc  --array_name ogs_model_tflite  --image_size 224

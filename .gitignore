@@ -8,7 +8,7 @@ env.bak/
 venv.bak/
 
 .vscode/ 
-full-imagenet/
+imagenet/
 models/
 quantized_models/
 build/

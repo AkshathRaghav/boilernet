@@ -123,9 +123,7 @@ def main():
     p.add_argument("--total_epochs",type=int, default=30,
                    help="Total epochs including head_epochs")
     args = p.parse_args()
-    # python train_full.py --subset cats --data_dir "/home/araviki/workbench/boilernet/internal_switches/spi_test/compute_samples/full-imagenet/imagenet" --output_dir "/home/araviki/workbench/boilernet/internal_switches/spi_test/compute_samples/models" --backbone "mobilenet_v2" --image_size 224 --batch_size 32 --head_epochs 50 --total_epochs 100
 
-    # Prepare datasets for the chosen subset
     model, backbone, preprocess_fn = build_model(
         args.backbone,
         input_shape=(args.image_size, args.image_size, 3),
@@ -138,7 +136,6 @@ def main():
         args.data_dir, args.subset, "val",   args.image_size,
         args.batch_size, preprocess_fn, training=False)
 
-    # Compile for head training
     optimizer = optimizers.Adam(learning_rate=1e-3)
     model.compile(
         optimizer=optimizer,
@@ -147,7 +144,6 @@ def main():
     )
     model.summary()
 
-    # Callbacks
     os.makedirs(args.output_dir, exist_ok=True)
     ckpt = os.path.join(args.output_dir, f"{args.subset}_{args.backbone}_best.keras")
     cbs = [
@@ -178,7 +174,6 @@ def main():
               epochs=args.total_epochs,
               callbacks=cbs, verbose=2)
 
-    # Save final model
     out_path = os.path.join(args.output_dir,
                             f"{args.subset}_{args.backbone}_final.keras")
     model.save(out_path)
@@ -188,3 +183,4 @@ if __name__ == "__main__":
     main()
 
 
+# python train_full.py --subset cats --data_dir "/home/araviki/workbench/boilernet/model_train/imagenet" --output_dir "/home/araviki/workbench/boilernet/model_train/models" --backbone "mobilenet_v2" --image_size 224 --batch_size 32 --head_epochs 50 --total_epochs 100
