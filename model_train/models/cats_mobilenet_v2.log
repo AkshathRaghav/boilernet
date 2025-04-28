@@ -1,0 +1,42 @@
+2025-04-28 01:38:47,908 INFO Starting training for subset=cats, backbone=mobilenet_v2
+2025-04-28 01:38:54,202 INFO Model: "mobilenet_v2_subset"
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┓
+┃ Layer (type)                         ┃ Output Shape                ┃         Param # ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━┩
+│ input_layer_1 (InputLayer)           │ (None, 224, 224, 3)         │               0 │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ mobilenetv2_0.35_224 (Functional)    │ (None, 1280)                │         410,208 │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ dropout (Dropout)                    │ (None, 1280)                │               0 │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ dense (Dense)                        │ (None, 5)                   │           6,405 │
+└──────────────────────────────────────┴─────────────────────────────┴─────────────────┘
+ Total params: 416,613 (1.59 MB)
+ Trainable params: 6,405 (25.02 KB)
+ Non-trainable params: 410,208 (1.56 MB)
+
+2025-04-28 01:38:54,202 INFO Phase 1: training head for 25 epochs
+2025-04-28 01:42:12,844 INFO Phase 2: fine-tuning backbone
+2025-04-28 01:45:41,764 INFO ✅ Training complete. Model saved to: /home/araviki/workbench/boilernet/model_train/models/cats_mobilenet_v2_final.keras
+2025-04-28 01:47:43,320 INFO Starting training for subset=cats, backbone=mobilenet_v2
+2025-04-28 01:47:47,923 INFO Model: "mobilenet_v2_subset"
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┓
+┃ Layer (type)                         ┃ Output Shape                ┃         Param # ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━┩
+│ input_layer_1 (InputLayer)           │ (None, 224, 224, 3)         │               0 │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ mobilenetv2_0.35_224 (Functional)    │ (None, 1280)                │         410,208 │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ dropout (Dropout)                    │ (None, 1280)                │               0 │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ dense (Dense)                        │ (None, 5)                   │           6,405 │
+└──────────────────────────────────────┴─────────────────────────────┴─────────────────┘
+ Total params: 416,613 (1.59 MB)
+ Trainable params: 6,405 (25.02 KB)
+ Non-trainable params: 410,208 (1.56 MB)
+
+2025-04-28 01:47:47,923 INFO Phase 1: training head for 25 epochs
+2025-04-28 01:50:43,598 INFO Phase 2: fine-tuning backbone
+2025-04-28 01:54:08,962 INFO ✅ Training complete. Model saved to: /home/araviki/workbench/boilernet/model_train/models/cats_mobilenet_v2_final.keras
+2025-04-28 01:54:09,232 INFO Accuracy plot saved to: /home/araviki/workbench/boilernet/model_train/models/cats_mobilenet_v2_accuracy.png
+2025-04-28 01:54:09,300 INFO Loss plot saved to: /home/araviki/workbench/boilernet/model_train/models/cats_mobilenet_v2_loss.png

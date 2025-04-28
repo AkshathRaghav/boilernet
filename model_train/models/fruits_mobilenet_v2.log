@@ -1,0 +1,22 @@
+2025-04-28 02:00:28,402 INFO Starting training for subset=fruits, backbone=mobilenet_v2
+2025-04-28 02:00:28,963 INFO Model: "mobilenet_v2_subset"
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┓
+┃ Layer (type)                         ┃ Output Shape                ┃         Param # ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━┩
+│ input_layer_7 (InputLayer)           │ (None, 224, 224, 3)         │               0 │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ mobilenetv2_0.35_224 (Functional)    │ (None, 1280)                │         410,208 │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ dropout_2 (Dropout)                  │ (None, 1280)                │               0 │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ dense_2 (Dense)                      │ (None, 5)                   │           6,405 │
+└──────────────────────────────────────┴─────────────────────────────┴─────────────────┘
+ Total params: 416,613 (1.59 MB)
+ Trainable params: 6,405 (25.02 KB)
+ Non-trainable params: 410,208 (1.56 MB)
+
+2025-04-28 02:00:28,963 INFO Phase 1: training head for 25 epochs
+2025-04-28 02:03:18,863 INFO Phase 2: fine-tuning backbone
+2025-04-28 02:06:46,072 INFO ✅ Training complete. Model saved to: /home/araviki/workbench/boilernet/model_train/models/fruits_mobilenet_v2_final.keras
+2025-04-28 02:06:46,166 INFO Accuracy plot saved to: /home/araviki/workbench/boilernet/model_train/models/fruits_mobilenet_v2_accuracy.png
+2025-04-28 02:06:46,232 INFO Loss plot saved to: /home/araviki/workbench/boilernet/model_train/models/fruits_mobilenet_v2_loss.png
