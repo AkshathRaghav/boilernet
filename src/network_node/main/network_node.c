@@ -440,8 +440,7 @@ static void tcp_server_task(void *pvParameters)
            
             switch(pkt_type) {
                 // ---------- Write FSM handling  ------------
-                case PACKET_TYPE_START_WRITE:
-                {
+                case PACKET_TYPE_START_WRITE: {
                     if (state != FSM_WAIT_START_WRITE) {
                         ESP_LOGE(COMM_TAG, "Unexpected START packet");
                         state = FSM_ERROR;
@@ -480,8 +479,7 @@ static void tcp_server_task(void *pvParameters)
                     state = FSM_WAIT_DATA_WRITE;
                     break;
                 }
-                case PACKET_TYPE_DATA_WRITE:
-                {
+                case PACKET_TYPE_DATA_WRITE: {
                     uint8_t len_buf[2];
                     if (recv_all(sock, len_buf, sizeof(len_buf)) != 0) {
                         ESP_LOGE(COMM_TAG, "Failed to read DATA length");
@@ -521,8 +519,7 @@ static void tcp_server_task(void *pvParameters)
 
                     break;
                 }
-                case PACKET_TYPE_MID_WRITE:
-                {
+                case PACKET_TYPE_MID_WRITE: {
                     uint8_t mid_buf[2];
                     if (recv_all(sock, mid_buf, sizeof(mid_buf)) != 0) {
                         ESP_LOGE(COMM_TAG, "Failed to read MID packet payload");
@@ -552,8 +549,7 @@ static void tcp_server_task(void *pvParameters)
 
                     break;
                 }
-                case PACKET_TYPE_END_WRITE:
-                {
+                case PACKET_TYPE_END_WRITE: {
                     uint8_t end_buf[4];
                     if (recv_all(sock, end_buf, sizeof(end_buf)) != 0) {
                         ESP_LOGE(COMM_TAG, "Failed to read END packet payload");
@@ -590,8 +586,7 @@ static void tcp_server_task(void *pvParameters)
                 }
                 
                 // ---------- Read FSM handling ------------
-                case PACKET_TYPE_START_READ:
-                {
+                case PACKET_TYPE_START_READ: {
                     if (state != FSM_WAIT_START_WRITE) { // FSM_WAIT_START_WRITE is being used as an IDLE State here. Not the best logic lol.
                         ESP_LOGE(COMM_TAG, "Unexpected START_READ packet");
                         state = FSM_ERROR;
@@ -640,8 +635,7 @@ static void tcp_server_task(void *pvParameters)
                 }
                 
                 // ---------- Compute FSM handling ------------
-                case PACKET_TYPE_START_COMPUTE:
-                {
+                case PACKET_TYPE_START_COMPUTE: {
                     if (state != FSM_WAIT_START_WRITE) {
                         ESP_LOGE(COMM_TAG, "Unexpected START_COMPUTE packet in state %d", state);
                         state = FSM_ERROR;
@@ -717,8 +711,7 @@ static void tcp_server_task(void *pvParameters)
                     }
                     break;
                 }
-                case PACKET_TYPE_POLL_COMPUTE:
-                {
+                case PACKET_TYPE_POLL_COMPUTE: {
                     if (state != FSM_WAIT_COMPUTE) {
                         ESP_LOGE(COMM_TAG, "Unexpected POLL_COMPUTE packet in state %d", state);
                         state = FSM_ERROR;
@@ -800,8 +793,7 @@ static void tcp_server_task(void *pvParameters)
                 }
 
                 // ---------- Delete FSM handling ------------
-                case PACKET_TYPE_DELETE:
-                {
+                case PACKET_TYPE_DELETE: {
                     if (state != FSM_WAIT_START_WRITE) {
                         ESP_LOGE(COMM_TAG, "Unexpected DELETE packet in state %d", state);
                         state = FSM_ERROR;
@@ -831,35 +823,34 @@ static void tcp_server_task(void *pvParameters)
                     }
 
                     memset(tx_buf, 0, TRANSFER_SIZE);
-                    // we do a second one to check if there 
+
                     if (spi_send_packet(t, tx_buf, rx_buf, NULL) != 0) {
                         ESP_LOGE(COMM_TAG, "SPI second transaction during DELETE failed.");
                         state = FSM_ERROR;
                         break;
                     }
 
-                    uint8_t slave_response = rx_buf[0];
-                    if (slave_response == PACKET_TYPE_FUC) {
+                    if (rx_buf[0] == PACKET_TYPE_FUC) {
                         ESP_LOGE(COMM_TAG, "Slave returned FUC during DELETE.");
                         if (send(sock, rx_buf, 1, 0) < 0) {
                             ESP_LOGE(COMM_TAG, "Failed to forward FUC to router.");
                         }
                         state = FSM_ERROR;
                         break;
-                    } else if (slave_response == PACKET_TYPE_DELETE_RET) {
-                        if (rx_buf[1] == 0xDD) { 
+                    } else if (rx_buf[0] == PACKET_TYPE_DELETE_RET) {
+                        if (rx_buf[1] == 0xAA) { 
                             ESP_LOGI(COMM_TAG, "Slave reported DELETE completion (flag: 0xDD).");
                             if (send(sock, rx_buf, 2, 0) < 0) {
                                 ESP_LOGE(COMM_TAG, "Failed to forward DELETE error to router.");
                             }
-                            state =FSM_WAIT_START_WRITE; // SUCCESS!!
+                            state = FSM_WAIT_START_WRITE; // SUCCESS!!
                         } else {
                             ESP_LOGE(COMM_TAG, "Wrong success code in DELETE_RET received.");
                             state = FSM_ERROR;
                             break;
                         }
                     } else {
-                        ESP_LOGE(COMM_TAG, "Unexpected slave response during DELETE response: 0x%02X", slave_response);
+                        ESP_LOGE(COMM_TAG, "Unexpected slave response during DELETE response: 0x%02X", rx_buf[0]);
                         state = FSM_ERROR;
                         break;
                     }
@@ -867,13 +858,11 @@ static void tcp_server_task(void *pvParameters)
                 }
 
                 // --------------------------------------------------
-                case PACKET_TYPE_FUC: 
-                {
+                case PACKET_TYPE_FUC: {
                     state = FSM_ERROR;
                     break; 
                 } 
-                default:
-                {
+                default: {
                     ESP_LOGE(COMM_TAG, "Unknown packet type received: 0x%02X", pkt_type);
                     state = FSM_ERROR;
                     break;

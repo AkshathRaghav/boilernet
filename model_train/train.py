@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 import os
 import argparse
+import pandas as pd
+import matplotlib.pyplot as plt
+import logging
+
 import tensorflow as tf
 from tensorflow.keras import layers, models, callbacks, optimizers
 
@@ -19,6 +23,27 @@ object_subsets = {
         "n02129165",  # Lion
         "n02132136",  # Bear
         "n02123394",  # Baboon
+    ], 
+    "fruits": [
+        "n07753592",  # banana 
+        "n07745940",  # strawberry 
+        "n07753275",  # pineapple
+        "n07747607",  # orange 
+        "n07760859",  # custard apple 
+    ], 
+    "kitchen": [
+        "n03400231",  # frypan
+        "n03761084",  # microwave 
+        "n03775546",  # mixing bowl
+        "n04398044",  # teapot 
+        "n07579787",  # plate
+    ],
+    "stationary": [
+        "n03179701",  # desk
+        "n03291819",  # envelope
+        "n03018349",  # cabinet 
+        "n03832673",  # notebook
+        "n03180011",  # computer/monitor
     ]
 }
 
@@ -106,9 +131,13 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--data_dir",    required=True,
                    help="Path to imagenet folder with train/ and val/")
-    p.add_argument("--subset",      required=True,
-                   choices=list(object_subsets.keys()),
-                   help="Which subset to train (e.g. dogs or cats)")
+    p.add_argument(
+        "--subset",
+        required=True,
+        nargs="+",  
+        choices=list(object_subsets.keys()),
+        help="One or more subsets to train (e.g. fruits vehicles tools)"
+    )
     p.add_argument("--output_dir",  required=True,
                    help="Where to save checkpoints & final model")
 
@@ -124,63 +153,95 @@ def main():
                    help="Total epochs including head_epochs")
     args = p.parse_args()
 
-    model, backbone, preprocess_fn = build_model(
-        args.backbone,
-        input_shape=(args.image_size, args.image_size, 3),
-        num_classes=len(object_subsets[args.subset])
-    )
-    train_ds = make_subset_dataset(
-        args.data_dir, args.subset, "train", args.image_size,
-        args.batch_size, preprocess_fn, training=True)
-    val_ds   = make_subset_dataset(
-        args.data_dir, args.subset, "val",   args.image_size,
-        args.batch_size, preprocess_fn, training=False)
-
-    optimizer = optimizers.Adam(learning_rate=1e-3)
-    model.compile(
-        optimizer=optimizer,
-        loss="sparse_categorical_crossentropy",
-        metrics=["accuracy"]
-    )
-    model.summary()
 
     os.makedirs(args.output_dir, exist_ok=True)
-    ckpt = os.path.join(args.output_dir, f"{args.subset}_{args.backbone}_best.keras")
-    cbs = [
-        callbacks.ModelCheckpoint(ckpt, monitor="val_accuracy",
-                                  save_best_only=True, verbose=1),
-        callbacks.ReduceLROnPlateau(monitor="val_loss",
-                                    factor=0.5, patience=3, verbose=1),
-    ]
 
-    # ─── Phase 1: head only ─────────────────────────────────────────────────────
-    print(f"\n>> Phase 1: training head for {args.head_epochs} epochs on subset [{args.subset}]")
-    model.fit(train_ds, validation_data=val_ds,
-              epochs=args.head_epochs, callbacks=cbs, verbose=2)
+    for subset_ in args.subset:
+        log_path = os.path.join(args.output_dir, f"{subset_}_{args.backbone}.log")
+        logger = logging.getLogger(subset_ + args.backbone)
+        logger.setLevel(logging.INFO)
+        if not logger.handlers:
+            fh = logging.FileHandler(log_path)
+            fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+            logger.addHandler(fh)
 
-    # ─── Phase 2: fine‑tune backbone ───────────────────────────────────────────
-    print("\n>> Phase 2: fine‑tuning backbone")
-    backbone.trainable = True
-    for layer in backbone.layers[:-20]:
-        layer.trainable = False
+        logger.info(f"Starting training for subset={subset_}, backbone={args.backbone}")
 
-    model.compile(
-        optimizer=optimizers.Adam(learning_rate=1e-4),
-        loss="sparse_categorical_crossentropy",
-        metrics=["accuracy"]
-    )
-    model.fit(train_ds, validation_data=val_ds,
-              initial_epoch=args.head_epochs,
-              epochs=args.total_epochs,
-              callbacks=cbs, verbose=2)
+        model, backbone, preprocess_fn = build_model(
+            args.backbone,
+            input_shape=(args.image_size, args.image_size, 3),
+            num_classes=len(object_subsets[subset_])
+        )
+        train_ds = make_subset_dataset(
+            args.data_dir, subset_, "train", args.image_size,
+            args.batch_size, preprocess_fn, training=True)
+        val_ds   = make_subset_dataset(
+            args.data_dir, subset_, "val",   args.image_size,
+            args.batch_size, preprocess_fn, training=False)
 
-    out_path = os.path.join(args.output_dir,
-                            f"{args.subset}_{args.backbone}_final.keras")
-    model.save(out_path)
-    print("✅ Training complete. Model saved to:", out_path)
+        optimizer = optimizers.Adam(learning_rate=1e-3)
+        model.compile(
+            optimizer=optimizer,
+            loss="sparse_categorical_crossentropy",
+            metrics=["accuracy"]
+        )
+        model.summary(print_fn=lambda x: logger.info(x))
+
+        ckpt_path = os.path.join(args.output_dir, f"{subset_}_{args.backbone}_best.keras")
+        csv_log_path = os.path.join(args.output_dir, f"{subset_}_{args.backbone}.csv")
+
+        cbs = [
+            callbacks.ModelCheckpoint(ckpt_path, monitor="val_accuracy", save_best_only=True, verbose=1), callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=3, verbose=1),
+            callbacks.CSVLogger(csv_log_path, append=True)
+        ]
+
+        logger.info(f"Phase 1: training head for {args.head_epochs} epochs")
+        hist1 = model.fit(train_ds, validation_data=val_ds, epochs=args.head_epochs, callbacks=cbs, verbose=2)
+
+        # ─── Phase 2: fine-tune backbone ───────────────────────────────
+        logger.info("Phase 2: fine-tuning backbone")
+        backbone.trainable = True
+        for layer in backbone.layers[:-20]:
+            layer.trainable = False
+
+        model.compile(
+            optimizer=optimizers.Adam(learning_rate=1e-4),
+            loss="sparse_categorical_crossentropy",
+            metrics=["accuracy"]
+        )
+        hist2 = model.fit(
+            train_ds, validation_data=val_ds,
+            initial_epoch=args.head_epochs,
+            epochs=args.total_epochs,
+            callbacks=cbs, verbose=2
+        )
+
+        final_path = os.path.join(args.output_dir, f"{subset_}_{args.backbone}_final.keras")
+        model.save(final_path)
+        logger.info(f"✅ Training complete. Model saved to: {final_path}")
+
+        df = pd.read_csv(csv_log_path)
+        epochs = df.index + 1
+
+        plt.figure()
+        plt.plot(epochs, df["accuracy"],        label="train_acc")
+        plt.plot(epochs, df["val_accuracy"],    label="val_acc")
+        plt.xlabel("Epoch"); plt.ylabel("Accuracy")
+        plt.legend(); plt.title(f"{subset_} — {args.backbone} Accuracy")
+        acc_plot = os.path.join(args.output_dir, f"{subset_}_{args.backbone}_accuracy.png")
+        plt.savefig(acc_plot); plt.close()
+        logger.info(f"Accuracy plot saved to: {acc_plot}")
+
+        plt.figure()
+        plt.plot(epochs, df["loss"],            label="train_loss")
+        plt.plot(epochs, df["val_loss"],        label="val_loss")
+        plt.xlabel("Epoch"); plt.ylabel("Loss")
+        plt.legend(); plt.title(f"{subset_} — {args.backbone} Loss")
+        loss_plot = os.path.join(args.output_dir, f"{subset_}_{args.backbone}_loss.png")
+        plt.savefig(loss_plot); plt.close()
+        logger.info(f"Loss plot saved to: {loss_plot}")
 
 if __name__ == "__main__":
     main()
-
-
-# python train_full.py --subset cats --data_dir "/home/araviki/workbench/boilernet/model_train/imagenet" --output_dir "/home/araviki/workbench/boilernet/model_train/models" --backbone "mobilenet_v2" --image_size 224 --batch_size 32 --head_epochs 50 --total_epochs 100
+        
+# python train.py --data_dir "/home/araviki/workbench/boilernet/model_train/imagenet" --output_dir "/home/araviki/workbench/boilernet/model_train/models" --backbone "mobilenet_v2" --image_size 224 --batch_size 32 --head_epochs 25 --total_epochs 55 --subset cats dogs fruits kitchen stationary

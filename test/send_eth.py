@@ -29,25 +29,12 @@ PACKET_TYPE_POLL_COMPUTE = 0xC1
 PACKET_TYPE_WAIT_COMPUTE = 0xC2
 PACKET_TYPE_END_COMPUTE = 0xC3
 
+PACKET_TYPE_DELETE = 0xE0
+PACKET_TYPE_DELETE_RET = 0xE1
+
 FILE_NOT_FOUND_ERROR_CODE = 0xFF
 
 DATA_PACKET_SIZE = 2030
-
-
-# --------------------------
-# FSM State enum (for write only; new read FSM uses a loop)
-# --------------------------
-class State(Enum):
-    IDLE = 0
-    SEND_START_WRITE = 1
-    WAIT_START_ACK_WRITE = 2
-    SEND_DATA_WRITE = 3
-    SEND_MID_WRITE = 4
-    SEND_END_WRITE = 6
-    WAIT_MID_ACK_WRITE = 10
-    WAIT_END_ACK_WRITE = 7
-    COMPLETE = 8
-    ERROR = 9
 
 
 # --------------------------
@@ -55,7 +42,6 @@ class State(Enum):
 # --------------------------
 response_times = []
 packet_response_times = {}
-
 
 def record_packet_time(packet_name, start, end):
     dt_ms = (end - start) * 1000
@@ -69,7 +55,6 @@ def calculate_checksum(data_bytes):
     # A simple checksum: sum of all bytes mod 2^32.
     return sum(data_bytes) & 0xFFFFFFFF
 
-
 def recvall(sock, n):
     """
     Helper to receive exactly n bytes from the socket.
@@ -82,10 +67,21 @@ def recvall(sock, n):
         data.extend(packet)
     return bytes(data)
 
-
 # --------------------------
 # Write Mode Helper Functions and FSM
 # --------------------------
+class State(Enum):
+    IDLE = 0
+    SEND_START_WRITE = 1
+    WAIT_START_ACK_WRITE = 2
+    SEND_DATA_WRITE = 3
+    SEND_MID_WRITE = 4
+    SEND_END_WRITE = 6
+    WAIT_MID_ACK_WRITE = 10
+    WAIT_END_ACK_WRITE = 7
+    COMPLETE = 8
+    ERROR = 9
+
 def create_start_packet(filename):
     """
     START packet structure for writing:
@@ -113,7 +109,6 @@ def create_data_packet(data_chunk):
     header = struct.pack("!BH", PACKET_TYPE_DATA_WRITE, length)
     return header + data_chunk
 
-
 def create_mid_packet():
     """
     MID packet structure (write):
@@ -121,7 +116,6 @@ def create_mid_packet():
     [Reserved/Padding (2 bytes length set to zero)]
     """
     return struct.pack("!BH", PACKET_TYPE_MID_WRITE, 0)
-
 
 def create_end_packet(checksum):
     """

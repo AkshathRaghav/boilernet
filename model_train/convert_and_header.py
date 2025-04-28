@@ -74,34 +74,64 @@ object_subsets = {
         "n02129165",  # Lion
         "n02132136",  # Bear
         "n02123394",  # Baboon
+    ], 
+    "fruits": [
+        "n07753592",  # banana 
+        "n07745940",  # strawberry 
+        "n07753275",  # pineapple
+        "n07747607",  # orange 
+        "n07760859",  # custard apple 
+    ], 
+    "kitchen": [
+        "n03400231",  # frypan
+        "n03761084",  # microwave 
+        "n03775546",  # mixing bowl
+        "n04398044",  # teapot 
+        "n07579787",  # plate
+    ],
+    "stationary": [
+        "n03179701",  # desk
+        "n03291819",  # envelope
+        "n03018349",  # cabinet 
+        "n03832673",  # notebook
+        "n03180011",  # computer/monitor
     ]
 }
 
 def main():
-    parser = argparse.ArgumentParser(description="Convert TF SavedModel to int8 TFLite + generate C header for a subset.")
-    parser.add_argument('--saved_model_dir', required=True, help='Directory of the saved TF Keras model.')
+    parser = argparse.ArgumentParser(description="Convert TF SavedModel to int8 TFLite + generate C header for multiple subsets.")
+    parser.add_argument(
+        "--subset",
+        required=True,
+        nargs="+",  
+        choices=list(object_subsets.keys()),
+        help='Which subsets to use for representative data'
+    )
+    parser.add_argument('--saved_model_template', required=True, help='File path pattern of the TF Keras model.')
     parser.add_argument('--data_dir',        required=True, 
                         help='Path to ILSVRC2012 with train/<synset>/ and val/<synset>/')
-    parser.add_argument('--subset',          required=True,
-                        choices=list(object_subsets.keys()),
-                        help='Which subset to use for representative data')
-    parser.add_argument('--tflite_path',     required=True, help='Output path for the .tflite file.')
-    parser.add_argument('--header_path',     required=True, help='Output path for the generated C header (.cc).')
+
+    parser.add_argument('--tflite_path',     required=True, help='Output folder for the .tflite file.')
+    parser.add_argument('--header_path',     required=True, help='Output folder for the generated C header (.cc).')
     parser.add_argument('--array_name',      default='model_tflite', help='C array name for the model data.')
     parser.add_argument('--image_size',      type=int, default=32, help='Image input size for representative data.')
     args = parser.parse_args()
 
-    synsets = object_subsets[args.subset]
-    # Quantize model
-    tflite_bytes = quantize_model(
-        args.saved_model_dir, args.tflite_path,
-        args.data_dir, synsets, args.image_size)
+    for subset_ in args.subset:
+        print(f"Converting first subset: {subset_}")
+        synsets = object_subsets[subset_]
+        header_path = os.path.join(args.header_path, f"{subset_}_model_data.cc")
+        tflite_path = os.path.join(args.tflite_path, f"{subset_}_int8.tflite")
+        saved_model = args.saved_model_template.format(subset_)
 
-    # Generate CC header
-    generate_cc_header(tflite_bytes, args.array_name, args.header_path)
+        tflite_bytes = quantize_model(
+            saved_model, tflite_path,
+            args.data_dir, synsets, args.image_size)
+
+        generate_cc_header(tflite_bytes, args.array_name, header_path)
 
 if __name__ == "__main__":
     main()
 
 
-# python convert_and_header.py --saved_model_dir "/home/araviki/workbench/boilernet/model_train/models/dogs_mobilenet_v2_best.keras"  --data_dir "/home/araviki/workbench/boilernet/model_train/imagenet" --subset "dogs" --tflite_path "/home/araviki/workbench/boilernet/model_train/models/dogs_int8.tflite" --header_path ./dogs_model_data.cc  --array_name ogs_model_tflite  --image_size 224
+# python convert_and_header.py --saved_model_template "/home/araviki/workbench/boilernet/model_train/models/{}_mobilenet_v2_best.keras"  --data_dir "/home/araviki/workbench/boilernet/model_train/imagenet" --subset dogs cats kitchen fruits stationary --tflite_path "/home/araviki/workbench/boilernet/model_train/quantized_models" --header_path  "/home/araviki/workbench/boilernet/model_train/quantized_models" --image_size 224

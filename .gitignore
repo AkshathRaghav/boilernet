@@ -9,8 +9,6 @@ venv.bak/
 
 .vscode/ 
 imagenet/
-models/
-quantized_models/
 build/
 managed_components/
 __pycache__/
