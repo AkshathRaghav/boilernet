@@ -134,14 +134,14 @@ typedef enum {
 
 // ################################################################
 
-#define SD_NUM_MOSI     23
-#define SD_NUM_MISO     19
-#define SD_NUM_CLK     18
+#define SD_NUM_MOSI     13
+#define SD_NUM_MISO     12
+#define SD_NUM_CLK      14
 #define SD_NUM_CS       4
 
 #define MOUNT_POINT "/sdcard"
 
-#define SD_HOST   VSPI_HOST   
+#define SD_HOST   HSPI_HOST   
 
 // ################################################################
 
