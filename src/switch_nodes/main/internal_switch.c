@@ -685,8 +685,10 @@ static void spi_handler_task(void *pvParameters) {
                 filename[79] = '\0';
                 sd_file = sdcard_open(filename, "r");
                 if (sd_file == NULL) {
+                    tx_buf[0] = PACKET_TYPE_END_COMPUTE;
+                    tx_buf[1] = 0xFF;
                     ESP_LOGE(COMM_TAG, "File not found on SD: %s", filename);
-                    fsm_state = FSM_ERROR;
+                    fsm_state = FSM_WAIT_END_COMPUTE;
                     break;
                 }
                 file_opened = 1; 

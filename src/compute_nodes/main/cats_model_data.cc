@@ -3,9 +3,9 @@
 #include "model_data.h"
 
 const char* model_labels[NUM_CLASSES] = {
-  "Egyptian",
-  "Persian",
   "Lion",
+  "Persian",
+  "Egyptian",
   "Bear",
   "Baboon"
 };

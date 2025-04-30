@@ -1,0 +1,4 @@
+0: {"pred":"Pug","time":8937,"scores":{"German Shepherd":-128.000,"Labrador Retriever":-128.000,"Pug":0.000,"Chihuahua":-128.000,"Poodle":0.000}}
+1: {"pred":"Lion","time":8240,"scores":{"Lion":-43.000,"Persian":-128.000,"Egyptian":-43.000,"Bear":-128.000,"Baboon":-43.000}}
+2: {"pred":"Banana","time":8937,"scores":{"Banana":-43.000,"Strawberry":-43.000,"Pineapple":-128.000,"Orange":-43.000,"Custard Apple":-128.000}}
+3: FAILED

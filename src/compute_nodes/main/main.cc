@@ -397,4 +397,11 @@ extern "C" void app_main() {
     
     xTaskCreate(blade_spi_task, "blade_spi", 8*1024, NULL, 5, NULL);
     ESP_LOGI(COMM_TAG, "BLADE HANDLER INITIALIZED!");
+
+    for (int i=1; i<NUM_CLASSES; ++i) {
+      const char* res = model_labels[i];
+      ESP_LOGI(COMM_TAG, "Class Name: %s", res);
+    }
+
+
 }

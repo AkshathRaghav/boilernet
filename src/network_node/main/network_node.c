@@ -24,8 +24,9 @@ static esp_err_t SDCardInit(void) {
         .max_transfer_sz = 2048,
     };
 
+    esp_err_t ret; 
     host.max_freq_khz = 5200;
-    int ret = spi_bus_initialize(host.slot, &bus_cfg, SDSPI_DEFAULT_DMA);
+    ret = spi_bus_initialize(host.slot, &bus_cfg, SDSPI_DEFAULT_DMA);
     if (ret != ESP_OK) {
         ESP_LOGE("SDCARD", "Failed to initialize SPI bus for SD card: %s", esp_err_to_name(ret));
         return ret;
@@ -392,8 +393,18 @@ int fsm_file_read_master(int sock, spi_transaction_t t, uint8_t *dummy_tx_buf, u
     unsigned int received_data = 0;
     memset(dummy_tx_buf, 0, TRANSFER_SIZE);
     dummy_tx_buf[0] = PACKET_TYPE_DATA_READ; 
+
+    uint64_t t_end = 0; 
+    uint64_t t_start = esp_timer_get_time(); 
+
     
     while (1) {
+        t_end = esp_timer_get_time(); 
+
+        printf("Elapsed: %lld μs\n",
+            t_end - t_start);
+        t_start = esp_timer_get_time(); 
+
 
         ret = spi_receive_packet(t, dummy_tx_buf, rx_buf, switch_id);
         if (ret != 0) {
@@ -549,7 +560,7 @@ static void tcp_server_task(void *pvParameters)
         uint16_t previous_spi_paacket_len = 0; 
         uint8_t *previous_data_chunk = NULL; 
         uint16_t data_len = 0;
-        int8_t switch_id = -2; 
+        int8_t switch_id = 0; 
 
         uint8_t *tx_buf = heap_caps_malloc(TRANSFER_SIZE, MALLOC_CAP_DMA);
         uint8_t *rx_buf = heap_caps_malloc(TRANSFER_SIZE, MALLOC_CAP_DMA);
@@ -569,13 +580,23 @@ static void tcp_server_task(void *pvParameters)
         memset(rx_buf, 0, TRANSFER_SIZE);
         memset(expected_rx_buf, 0, TRANSFER_SIZE);
 
+        uint64_t t_end = 0; 
+        uint64_t t_start = esp_timer_get_time(); 
+
         while (state != FSM_COMPLETE && state != FSM_ERROR) {
+
+            t_end = esp_timer_get_time(); 
+
+            printf("Elapsed: %lld μs\n",
+                t_end - t_start);
+
             uint8_t pkt_type;
             if (recv_all(sock, &pkt_type, 1) != 0) {
                 ESP_LOGE(COMM_TAG, "Failed to read packet type");
                 state = FSM_ERROR;
                 break;
             }
+            t_start = esp_timer_get_time(); 
            
             switch(pkt_type) {
                 // ---------- Write FSM handling  ------------
@@ -602,7 +623,7 @@ static void tcp_server_task(void *pvParameters)
                     tx_buf[1] = 0x00;
                     memcpy(tx_buf + 2, filename_payload, 80);
 
-                    switch_id = choose_way(filename);
+                    // switch_id = choose_way(filename);
 
                     if (switch_id < 0) { 
                         ESP_LOGE(COMM_TAG, "Way selection failed!");
@@ -725,6 +746,12 @@ static void tcp_server_task(void *pvParameters)
                             break;
                         }
 
+                        if (send(sock, &pkt_type, 1, 0) < 0) {
+                            ESP_LOGE(COMM_TAG, "Failed to send END_WRITE ACK");
+                            state = FSM_ERROR;
+                            break;
+                        }
+
                         memcpy(expected_rx_buf, tx_buf, TRANSFER_SIZE);
 
                         state = FSM_COMPLETE;
@@ -750,7 +777,7 @@ static void tcp_server_task(void *pvParameters)
                     filename[79] = '\0';
                     ESP_LOGI(COMM_TAG, "START_READ: Filename: %s", filename);
                     
-                    switch_id = choose_way(filename);
+                    // switch_id = choose_way(filename);
 
                     if (switch_id < 0) { 
                         ESP_LOGE(COMM_TAG, "Way selection failed!");
@@ -967,7 +994,7 @@ static void tcp_server_task(void *pvParameters)
                     filename[79] = '\0';
                     ESP_LOGI(COMM_TAG, "DELETE: Filename: %s", filename);
                     
-                    switch_id = choose_way(filename);
+                    // switch_id = choose_way(filename);
 
                     if (switch_id < 0) { 
                         ESP_LOGE(COMM_TAG, "Way selection failed!");
@@ -1006,7 +1033,7 @@ static void tcp_server_task(void *pvParameters)
                             if (send(sock, rx_buf, 2, 0) < 0) {
                                 ESP_LOGE(COMM_TAG, "Failed to forward DELETE error to router.");
                             }
-                            state = FSM_WAIT_START_WRITE; // SUCCESS!!
+                            state = FSM_COMPLETE; // SUCCESS!!
                             sdcard_delete(filename);
                         }
                         else
@@ -1045,7 +1072,7 @@ static void tcp_server_task(void *pvParameters)
                 state = FSM_ERROR;
             }
             spi_send_packet_clear(t, tx_buf, rx_buf, switch_id); 
-            switch_id = -1; 
+            // switch_id = -1; 
         } 
         
         if (state == FSM_ERROR) {
@@ -1074,7 +1101,7 @@ static void tcp_server_task(void *pvParameters)
             }
             spi_send_packet_clear(t, tx_buf, rx_buf, switch_id); 
             ESP_LOGE(COMM_TAG, "Image transfer error occurred.");
-            switch_id = -1; 
+            // switch_id = -1; 
         }
 
         free(tx_buf);
@@ -1249,13 +1276,13 @@ void ethernet_setup(void)
 
 void app_main(void)
 {
-    esp_err_t sdret = SDCardInit(); 
-    if (sdret != 0)
-    {
-        ESP_LOGE(COMM_TAG, "SDCARD INITIALIZATION FAILED!: %s", esp_err_to_name(sdret));
-        return;
-    }
-    ESP_LOGI(COMM_TAG, "SDCARD INITIALIZED!");
+    // esp_err_t sdret = SDCardInit(); 
+    // if (sdret != 0)
+    // {
+    //     ESP_LOGE(COMM_TAG, "SDCARD INITIALIZATION FAILED!: %s", esp_err_to_name(sdret));
+    //     return;
+    //         }
+    // ESP_LOGI(COMM_TAG, "SDCARD INITIALIZED!");
 
     ethernet_setup();
     vTaskDelay(2000 / portTICK_PERIOD_MS);

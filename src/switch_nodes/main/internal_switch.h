@@ -105,15 +105,15 @@ static const char *COMM_TAG = "SPI_SLAVE";
 static const int compute_handshake_pins[] = {
     COMPUTE_HS_0,
     COMPUTE_HS_1,
-    COMPUTE_HS_2,
-    COMPUTE_HS_3
+    COMPUTE_HS_2
+    // COMPUTE_HS_3
 };
 
 static const int compute_cs_pins[] = {
     COMPUTE_CS_0,
     COMPUTE_CS_1,
-    COMPUTE_CS_2,
-    COMPUTE_CS_3
+    COMPUTE_CS_2
+    // COMPUTE_CS_3
 };
 
 #define NUM_COMPUTE_BLADES  (sizeof(compute_cs_pins)/sizeof(compute_cs_pins[0]))

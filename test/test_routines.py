@@ -20,6 +20,8 @@ DATA_WRITE    = 0xA1
 MID_WRITE    = 0xA2
 END_WRITE    = 0xA3
 
+FUC = 0xA4
+
 START_READ     = 0xB0
 DATA_READ     = 0xB1
 END_READ     = 0xB3
@@ -101,10 +103,13 @@ def fsm_write(sock, path, user_id):
     ext = os.path.splitext(path)[1].lower()
     if ext in ('.jpg','.jpeg'):
         img = Image.open(path).convert('RGB').resize((224,224))
-        buf = io.BytesIO().save(buf, format='PNG', optimize=True, compress_level=9)
+        buf = io.BytesIO()
+        img.save(buf, format='PNG', optimize=True, compress_level=9)
         data = buf.getvalue()
     else:
         data = open(path,'rb').read()
+
+    print(f"STORE on FILENAME: {path} | ext: {ext}")
 
     total = len(data)
     n_full = total // DATA_PACKET_SIZE
@@ -113,6 +118,8 @@ def fsm_write(sock, path, user_id):
     mid_i  = n_pkts // 2
 
     fn = f"{user_id}_{os.path.basename(path)}"
+
+    print(f"Total Bytes: {total} | Packets: {n_pkts}")
 
     # START
     sock.sendall(create_start_write(fn))
@@ -128,6 +135,7 @@ def fsm_write(sock, path, user_id):
 
     # END
     chksum = checksum32(data)
+    print(f"Sent END packet (write) with checksum {chksum:#010x}")
     sock.sendall(create_end_write(chksum))
     if not wait_for_ack(sock, END_WRITE):
         raise RuntimeError("No END_WRITE ACK")
@@ -162,8 +170,12 @@ def fsm_compute(sock, path, user_id):
     sock.sendall(create_start_compute(fn))
     resp = sock.recv(2)
     if not resp or resp[0] != START_COMPUTE:
-        raise RuntimeError("Failed to start compute")
+        if resp[1] == 0xFF: 
+            print("File not found in NAS!")
+            return 
+        else: raise RuntimeError("Failed to start compute")
 
+    sock.settimeout(15)
     while True:
         time.sleep(2.5)
         sock.sendall(create_poll_compute())
@@ -182,20 +194,17 @@ def fsm_delete(sock, path, user_id):
     fn = f"{user_id}_{os.path.basename(path)}"
     sock.sendall(create_delete_packet(fn))
     sock.settimeout(5)
-    hdr = recvall(sock,1)[0]
-    if hdr != DELETE_RET:
-        raise RuntimeError(f"DELETE failed, pkt={hdr:02X}")
     code = recvall(sock,2)
-    ok = code[0]
-    flag= code[1]
-    if ok != 0x01:
-        raise RuntimeError(f"DELETE_RET error, flag={flag:02X}")
+    if code[0] != DELETE_RET:
+        raise RuntimeError(f"DELETE failed, pkt={hdr:02X}")
+    if code[1] != 0xAA:
+        raise RuntimeError(f"DELETE_RET error, flag={code[1]:02X}")
     print("DELETE complete")
 
-# ### Main #################─
+# ### Main #################
 def main():
     if len(sys.argv)!=6:
-        print("Usage: send.py <port> <IP> <file> <mode> <user_id>")
+        print("Usage: test_routines.py <port> <IP> <file> <mode> <user_id>")
         sys.exit(1)
 
     port    = int(sys.argv[1])
@@ -204,8 +213,12 @@ def main():
     mode    = sys.argv[4].lower()
     user_id = sys.argv[5]
 
+    print(f"OPERATION: {mode} | USER_ID: {user_id}")
+
+    print("Connecting over Socket")
     with socket.create_connection((ip,port), timeout=5) as sock:
         t0 = time.perf_counter()
+        print("Opened Socket!")
         if mode=="write":
             fsm_write(sock, filearg, user_id)
         elif mode=="read":
@@ -230,8 +243,8 @@ def main():
 if __name__=="__main__":
     main()
 
-
-# python3 send.py 8080 192.168.0.50 scheduler.png write user01
-# python3 send.py 8080 192.168.0.50 scheduler.png read user01
-# python3 send.py 8080 192.168.0.50 scheduler.png compute user01
-# python3 send.py 8080 192.168.0.50 scheduler.png delete user01
+# Even if it's a JPG, or JPEG, we convert it into PNG. 
+# python3 test_routines.py 8080 192.168.0.50 chiahua.jpg write user01
+# python3 test_routines.py 8080 192.168.0.50 chiahua.jpg read user01
+# python3 test_routines.py 8080 192.168.0.50 chiahua.jpg compute user01
+# python3 test_routines.py 8080 192.168.0.50 chiahua.jpg delete user01

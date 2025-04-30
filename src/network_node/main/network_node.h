@@ -63,6 +63,7 @@
 #include "sdmmc_cmd.h"
 #include "driver/sdspi_host.h"
 #include "esp_vfs_fat.h"
+#include "esp_timer.h"
 
 // ################################################################
 
