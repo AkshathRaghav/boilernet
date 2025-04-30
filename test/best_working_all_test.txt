@@ -1,0 +1,256 @@
+(base) root@araviki:/home/araviki/workbench/boilernet/test# python3 test_routines.py 8080 192.168.0.50 combined.png write user02
+OPERATION: write | USER_ID: user02
+Connecting over Socket
+Opened Socket!
+STORE on FILENAME: ./input/combined.png | ext: .png
+Total Bytes: 66971 | Packets: 33
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2011 bytes -> 0.000s
+Sent END packet (write) with checksum 0x0083cec0
+WRITE complete
+  Duration:   3.588s
+  Throughput: 18664.04 bytes/s
+
+=== Timing Summary ===
+Total: 3589.00 ms
+Avg pkt time: 99.61 ms
+  ACK_A0: 22.60 ms
+  DATA_WRITE: 0.01 ms
+  ACK_A2: 2255.58 ms
+  ACK_A3: 1307.28 ms
+(base) root@araviki:/home/araviki/workbench/boilernet/test# python3 test_routines.py 8080 192.168.0.50 combined.png read user02
+OPERATION: read | USER_ID: user02
+Connecting over Socket
+Opened Socket!
+READ on FILENAME: ./results/combined.png
+[recv] DATA_READ_LEN: 2045 bytes -> 0.094s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.007s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.000s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.005s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.000s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.005s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.000s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.005s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.030s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.072s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.005s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.107s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.078s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.005s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.005s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.006s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.005s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.005s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.006s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.005s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.000s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.005s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.000s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.006s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.009s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.013s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.005s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.005s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.005s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.005s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.005s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.045s
+[recv] DATA_READ_LEN: 1531 bytes -> 0.006s
+[recv] END_READ_CHECKSUM: 0x00 0x83 0xCE 0xC0
+READ complete
+  Total bytes: 66971
+  Duration:    2.533s
+  Throughput (including I/O + Control Logic):  26441.78 bytes/s
+  Checksum:    0083CEC0
+
+=== Timing Summary ===
+Total: 2555.31 ms
+Avg pkt time: 17.01 ms
+  ACK_B0: 22.07 ms
+  DATA_READ: 16.85 ms
+(base) root@araviki:/home/araviki/workbench/boilernet/test# python3 test_routines.py 8080 192.168.0.50 combined.png compute user02
+OPERATION: compute | USER_ID: user02
+Connecting over Socket
+Opened Socket!
+COMPUTE on FILENAME: ./input/combined.png
+[recv] START_COMPUTE_REPLY: 0xC0
+[recv] POLL_COMPUTE_REPLY: 0xC3 0x00
+COMPUTE complete
+
+=== Timing Summary ===
+Total: 12754.73 ms
+(base) root@araviki:/home/araviki/workbench/boilernet/test# python3 test_routines.py 8080 192.168.0.50 combined_results.txt read user02
+OPERATION: read | USER_ID: user02
+Connecting over Socket
+Opened Socket!
+READ on FILENAME: ./results/combined_results.txt
+[recv] DATA_READ_LEN: 446 bytes -> 0.000s
+[recv] END_READ_CHECKSUM: 0x00 0x00 0x7D 0x40
+READ complete
+  Total bytes: 446
+  Duration:    0.598s
+  Throughput (including I/O + Control Logic):  745.64 bytes/s
+  Checksum:    00007D40
+
+=== Timing Summary ===
+Total: 620.65 ms
+Avg pkt time: 11.03 ms
+  ACK_B0: 22.05 ms
+  DATA_READ: 0.01 ms
+(base) root@araviki:/home/araviki/workbench/boilernet/test# python3 test_routines.py 8080 192.168.0.50 combined.png delete user02
+OPERATION: delete | USER_ID: user02
+Connecting over Socket
+Opened Socket!
+DELETE on FILENAME: ./input/combined.png
+[recv] DELETE_RET_CODE: 0xE1 0xAA
+DELETE complete
+
+=== Timing Summary ===
+Total: 907.08 ms
+(base) root@araviki:/home/araviki/workbench/boilernet/test# python3 test_routines.py 8080 192.168.0.50 combined.png read user02
+OPERATION: read | USER_ID: user02
+Connecting over Socket
+Opened Socket!
+READ on FILENAME: ./results/combined.png
+[recv] END_READ_CHECKSUM: 0xFF 0x00 0x7D 0x40
+Traceback (most recent call last):
+  File "/home/araviki/workbench/boilernet/test/test_routines.py", line 300, in <module>
+    main()
+  File "/home/araviki/workbench/boilernet/test/test_routines.py", line 282, in main
+    fsm_read(sock, out, user_id)
+  File "/home/araviki/workbench/boilernet/test/test_routines.py", line 194, in fsm_read
+    raise FileNotFoundError(fn)
+FileNotFoundError: user02_combined.png
+(base) root@araviki:/home/araviki/workbench/boilernet/test# python3 test_routines.py 8080 192.168.0.50 combined.png write user02
+OPERATION: write | USER_ID: user02
+Connecting over Socket
+Opened Socket!
+STORE on FILENAME: ./input/combined.png | ext: .png
+Total Bytes: 66971 | Packets: 33
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2030 bytes -> 0.000s
+[recv] DATA_WRITE_LEN: 2011 bytes -> 0.000s
+Sent END packet (write) with checksum 0x0083cec0
+WRITE complete
+  Duration:   3.995s
+  Throughput: 16763.65 bytes/s
+
+=== Timing Summary ===
+Total: 3995.39 ms
+Avg pkt time: 110.92 ms
+  ACK_A0: 21.18 ms
+  DATA_WRITE: 0.01 ms
+  ACK_A2: 2661.58 ms
+  ACK_A3: 1310.08 ms
+(base) root@araviki:/home/araviki/workbench/boilernet/test# python3 test_routines.py 8080 192.168.0.50 combined.png read user02
+OPERATION: read | USER_ID: user02
+Connecting over Socket
+Opened Socket!
+READ on FILENAME: ./results/combined.png
+[recv] DATA_READ_LEN: 2045 bytes -> 0.000s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.000s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.015s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.006s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.007s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.006s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.005s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.008s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.000s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.128s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.000s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.005s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.005s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.005s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.000s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.005s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.008s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.005s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.000s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.007s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.000s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.006s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.000s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.007s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.000s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.007s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.005s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.005s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.005s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.005s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.005s
+[recv] DATA_READ_LEN: 2045 bytes -> 0.004s
+[recv] DATA_READ_LEN: 1531 bytes -> 0.005s
+[recv] END_READ_CHECKSUM: 0x00 0x83 0xCE 0xC0
+READ complete
+  Total bytes: 66971
+  Duration:    2.570s
+  Throughput (including I/O + Control Logic):  26058.40 bytes/s
+  Checksum:    0083CEC0
+
+=== Timing Summary ===
+Total: 2613.20 ms
+Avg pkt time: 9.16 ms
+  ACK_B0: 42.76 ms
+  DATA_READ: 8.14 ms
+(base) root@araviki:/home/araviki/workbench/boilernet/test# 

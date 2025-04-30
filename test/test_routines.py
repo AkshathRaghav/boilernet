@@ -116,22 +116,31 @@ def fsm_write(sock, path, user_id):
     rem    = total % DATA_PACKET_SIZE
     n_pkts = n_full + bool(rem)
     mid_i  = n_pkts // 2
-
-    fn = f"{user_id}_{os.path.basename(path)}"
+    fn     = f"{user_id}_{os.path.basename(path)}"
 
     print(f"Total Bytes: {total} | Packets: {n_pkts}")
 
+    start_all = time.perf_counter()
+
     # START
     sock.sendall(create_start_write(fn))
-    if not wait_for_ack(sock, START_WRITE): raise RuntimeError("No START_WRITE ACK")
+    if not wait_for_ack(sock, START_WRITE):
+        raise RuntimeError("No START_WRITE ACK")
 
     # DATA + MID
     for i in range(n_pkts):
         chunk = data[i*DATA_PACKET_SIZE:(i+1)*DATA_PACKET_SIZE]
+        pkt_start = time.perf_counter()
         sock.sendall(create_data_write(chunk))
+        pkt_end   = time.perf_counter()
+        record_packet_time("DATA_WRITE", pkt_start, pkt_end)
+        x_dur = pkt_end - pkt_start 
+        print(f"[recv] DATA_WRITE_LEN: {len(chunk)} bytes -> {x_dur:.3f}s")
+
         if i == mid_i:
             sock.sendall(create_mid_write())
-            if not wait_for_ack(sock, MID_WRITE): raise RuntimeError("No MID_WRITE ACK")
+            if not wait_for_ack(sock, MID_WRITE):
+                raise RuntimeError("No MID_WRITE ACK")
 
     # END
     chksum = checksum32(data)
@@ -139,47 +148,86 @@ def fsm_write(sock, path, user_id):
     sock.sendall(create_end_write(chksum))
     if not wait_for_ack(sock, END_WRITE):
         raise RuntimeError("No END_WRITE ACK")
+
+    end_all = time.perf_counter()
+    duration = end_all - start_all
+    rate     = total / duration if duration>0 else float('inf')
+
     print("WRITE complete")
+    print(f"  Duration:   {duration:.3f}s")
+    print(f"  Throughput: {rate:.2f} bytes/s")
+
 
 def fsm_read(sock, out_path, user_id):
     fn = f"{user_id}_{os.path.basename(out_path)}"
+    print(f"READ on FILENAME: {out_path}")
+
     sock.sendall(create_start_read(fn))
-    if not wait_for_ack(sock, START_READ): raise RuntimeError("No START_READ ACK")
+    if not wait_for_ack(sock, START_READ):
+        raise RuntimeError("No START_READ ACK")
 
     f = open(out_path,'wb')
+    total_recv = 0
+    start_all  = time.perf_counter()
+
     while True:
         header = recvall(sock,1)[0]
         if header == DATA_READ:
-            length = struct.unpack("!H", recvall(sock,2))[0]
-            start=time.perf_counter()
-            chunk = recvall(sock,length)
-            record_packet_time("DATA_READ", start, time.perf_counter())
+            length_bytes = recvall(sock,2)
+            length = struct.unpack("!H", length_bytes)[0]
+
+            t0 = time.perf_counter()
+            chunk = recvall(sock, length)
+            t1 = time.perf_counter()
+            record_packet_time("DATA_READ", t0, t1)
+            x_dur = t1 - t0 
+            print(f"[recv] DATA_READ_LEN: {length} bytes -> {x_dur:.3f}s")
+
+            total_recv += len(chunk)
             f.write(chunk)
+
         elif header == END_READ:
-            remote = struct.unpack("!I", recvall(sock,4))[0]
+            checksum_bytes = recvall(sock,4)
+            print(f"[recv] END_READ_CHECKSUM: {' '.join(f'0x{b:02X}' for b in checksum_bytes)}")
+            remote = struct.unpack("!I", checksum_bytes)[0]
             if (remote>>24)&0xFF == FILE_NOT_FOUND_ERR:
                 raise FileNotFoundError(fn)
-            print(f"READ complete, checksum={remote:08X}")
             break
+
         else:
             raise RuntimeError(f"Unexpected READ pkt: {header:02X}")
+
     f.close()
+    end_all  = time.perf_counter()
+    duration = end_all - start_all
+    rate     = total_recv / duration if duration>0 else float('inf')
+
+    print("READ complete")
+    print(f"  Total bytes: {total_recv}")
+    print(f"  Duration:    {duration:.3f}s")
+    print(f"  Throughput (including I/O + Control Logic):  {rate:.2f} bytes/s")
+    print(f"  Checksum:    {remote:08X}")
+
 
 def fsm_compute(sock, path, user_id):
     fn = f"{user_id}_{os.path.basename(path)}"
+    print(f"COMPUTE on FILENAME: {path}")
+
     sock.sendall(create_start_compute(fn))
     resp = sock.recv(2)
+    print(f"[recv] START_COMPUTE_REPLY: {' '.join(f'0x{b:02X}' for b in resp)}")
     if not resp or resp[0] != START_COMPUTE:
-        if resp[1] == 0xFF: 
-            print("File not found in NAS!")
-            return 
-        else: raise RuntimeError("Failed to start compute")
+        if resp and resp[0]==FUC:
+            print("FUC received instead of START_COMPUTE")
+            return
+        raise RuntimeError("Failed to start compute")
 
     sock.settimeout(15)
     while True:
         time.sleep(2.5)
         sock.sendall(create_poll_compute())
         resp = sock.recv(2)
+        print(f"[recv] POLL_COMPUTE_REPLY: {' '.join(f'0x{b:02X}' for b in resp)}")
         if resp[0] == END_COMPUTE:
             if len(resp)>1 and resp[1]==FILE_NOT_FOUND_ERR:
                 raise FileNotFoundError(fn)
@@ -187,18 +235,26 @@ def fsm_compute(sock, path, user_id):
             break
         elif resp[0] == WAIT_COMPUTE:
             print("COMPUTE in progress...")
+        elif resp[0] == FUC:
+            print("FUC received during polling")
+            return
         else:
             raise RuntimeError(f"Unexpected POLL pkt: {resp[0]:02X}")
 
+
 def fsm_delete(sock, path, user_id):
     fn = f"{user_id}_{os.path.basename(path)}"
+    print(f"DELETE on FILENAME: {path}")
+
     sock.sendall(create_delete_packet(fn))
     sock.settimeout(5)
+
     code = recvall(sock,2)
-    if code[0] != DELETE_RET:
-        raise RuntimeError(f"DELETE failed, pkt={hdr:02X}")
-    if code[1] != 0xAA:
-        raise RuntimeError(f"DELETE_RET error, flag={code[1]:02X}")
+    print(f"[recv] DELETE_RET_CODE: {' '.join(f'0x{b:02X}' for b in code)}")
+    ok, flag = code
+    if flag != 0xAA:
+        raise RuntimeError(f"DELETE_RET error, flag={flag:02X}")
+
     print("DELETE complete")
 
 # ### Main #################
