@@ -1,0 +1,3 @@
+0: {"pred":"Banana","time":9052,"scores":{"Banana":0.539,"Strawberry":0.004,"Pineapple":0.094,"Orange":0.254,"Custard Apple":0.109}}
+1: {"pred":"Banana","time":9051,"scores":{"Banana":0.500,"Strawberry":0.500,"Pineapple":0.000,"Orange":0.000,"Custard Apple":0.000}}
+2: {"pred":"Banana","time":9051,"scores":{"Banana":0.500,"Strawberry":0.500,"Pineapple":0.000,"Orange":0.000,"Custard Apple":0.000}}

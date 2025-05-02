@@ -1,4 +1,6 @@
 #include "main.h"
+#include <cmath>       // for lroundf
+#include <algorithm>   // for clamp
 
 // ##############################################################################
 
@@ -260,8 +262,10 @@ void blade_spi_task(void *pvParameters) {
                 if (err || w!=IMG_SIZE || h!=IMG_SIZE) {
                     if (err) ESP_LOGE(COMM_TAG, "PNG decode error %u: %s", err, lodepng_error_text(err));
                     else ESP_LOGE(COMM_TAG, "PNG decode error, not err, but the h, w problem | %d, %d | %u: %s", h, w, err, lodepng_error_text(err));
-                    fsm = BLADE_FSM_ERROR; 
+                    fsm = BLADE_FSM_ERROR;
+                    break;
                 }
+
                 ESP_LOGI(COMM_TAG, "PNG decode in %lld ms", (t3-t2)/1000);
 
                 size_t img_bytes = w * h * 4;
@@ -276,22 +280,34 @@ void blade_spi_task(void *pvParameters) {
                 heap_caps_free(png_buf);
 
                 TfLiteTensor* input = interpreter.input(0);
-                float scale = input->params.scale;
-                int zero_point = input->params.zero_point;
+                float scale_in    = input->params.scale;
+                int   zp_in       = input->params.zero_point;
 
                 t4 = esp_timer_get_time();
-
                 int8_t* in_data = input->data.int8;
+
+                auto quantize = [&](float v)->int8_t {
+                  float qf = v / scale_in + zp_in;
+                  int   qi = std::lround(qf);
+                  qi = std::clamp(qi, -128, 127);
+                  return static_cast<int8_t>(qi);
+                };
+
                 for (unsigned y=0; y<h; ++y) {
                     for (unsigned x=0; x<w; ++x) {
                         unsigned idx_rgba = (y*w + x)*4;
-                        float r = rgba_ps[idx_rgba+0]/255.f;
-                        float g = rgba_ps[idx_rgba+1]/255.f;
-                        float b = rgba_ps[idx_rgba+2]/255.f;
                         unsigned idx_rgb = (y*w + x)*3;
-                        in_data[idx_rgb+0] = int8_t(r/scale) + zero_point;
-                        in_data[idx_rgb+1] = int8_t(g/scale) + zero_point;
-                        in_data[idx_rgb+2] = int8_t(b/scale) + zero_point;
+
+                        float rf = rgba_ps[idx_rgba+0]/255.f;
+                        float gf = rgba_ps[idx_rgba+1]/255.f;
+                        float bf = rgba_ps[idx_rgba+2]/255.f;
+                        float r = rf * 2.f - 1.f;
+                        float g = gf * 2.f - 1.f;
+                        float b = bf * 2.f - 1.f;
+
+                        in_data[idx_rgb + 0] = quantize(r);
+                        in_data[idx_rgb + 1] = quantize(g);
+                        in_data[idx_rgb + 2] = quantize(b);
                     }
                 }
                 if (interpreter.Invoke() != kTfLiteOk) {
@@ -305,12 +321,19 @@ void blade_spi_task(void *pvParameters) {
                 ESP_LOGI(COMM_TAG, "Inference in %lld ms", total_time);
 
                 TfLiteTensor* output = interpreter.output(0);
+                const float scale_out   = output->params.scale;
+                const int   zp_out      = output->params.zero_point;
                 int8_t* out_data = output->data.int8;
-                int best = 0;
-                for (int i=1; i<NUM_CLASSES; ++i) {
-                    if (out_data[i] > out_data[best]) best = i;
-                }
 
+                float confidences[NUM_CLASSES];
+                for (int i = 0; i < NUM_CLASSES; i++) {
+                  confidences[i] = (out_data[i] - zp_out) * scale_out;
+                }
+                int best = std::distance(
+                  confidences,
+                  std::max_element(confidences, confidences + NUM_CLASSES)
+                );
+ 
                 const char* res = model_labels[best];
                 ESP_LOGI(COMM_TAG, "Result: %s", res);
 
@@ -320,7 +343,6 @@ void blade_spi_task(void *pvParameters) {
                 char* p = (char*)(tx_buf + 3);
                 int pos = 0;
 
-                // start JSON
                 pos += snprintf(p + pos, TRANSFER_SIZE - 3 - pos,
                     "{"
                       "\"pred\":\"%s\","
@@ -331,12 +353,11 @@ void blade_spi_task(void *pvParameters) {
                 );
 
                 for (int i = 0; i < NUM_CLASSES; i++) {
-                  // float conf = (out_data[i] - zero_point) * scale;
                   pos += snprintf(p + pos, TRANSFER_SIZE - 3 - pos,
-                    "\"%s\":%.3f%s",
-                    model_labels[i],
-                    (float) out_data[i],
-                    (i < NUM_CLASSES - 1) ? "," : ""
+                  "\"%s\":%.3f%s",
+                  model_labels[i],
+                  confidences[i],
+                  (i < NUM_CLASSES - 1) ? "," : ""
                   );
                 }
 

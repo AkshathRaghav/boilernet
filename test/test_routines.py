@@ -21,6 +21,7 @@ MID_WRITE    = 0xA2
 END_WRITE    = 0xA3
 
 FUC = 0xA4
+WAY_BUSY = 0xA5
 
 START_READ     = 0xB0
 DATA_READ     = 0xB1
@@ -53,21 +54,24 @@ def recvall(sock: socket.socket, n: int) -> bytes:
     while len(buf) < n:
         chunk = sock.recv(n-len(buf))
         if not chunk:
-            raise IOError("Socket closed")
+            raise RuntimeError("Socket closed")
         buf.extend(chunk)
     return bytes(buf)
 
-def wait_for_ack(sock: socket.socket, exp_type: int, timeout: float=5.0) -> bool:
+def wait_for_ack(sock: socket.socket, exp_type: int, timeout: float=5.0) -> int:
     sock.settimeout(timeout)
     start = time.perf_counter()
     try:
         b = sock.recv(1)
         elapsed = time.perf_counter()
         record_packet_time(f"ACK_{exp_type:02X}", start, elapsed)
-        return b and b[0] == exp_type
+        if (b and b[0] == exp_type): return 0
+        elif (b and b[0] == WAY_BUSY): return -1 
+        else: return -2 
     except socket.timeout:
         record_packet_time(f"ACK_TIMEOUT_{exp_type:02X}", start, time.perf_counter())
-        return False
+        print("Timeout!!")
+        return -2
 
 # ### Packet Creators #################
 def pad_filename(fn: str, length: int=80) -> bytes:
@@ -81,7 +85,7 @@ def create_data_write(chunk: bytes) -> bytes:
     return struct.pack("!BH", DATA_WRITE, len(chunk)) + chunk
 
 def create_mid_write() -> bytes:
-    return struct.pack("!BH", MID_WRITE, 0)
+    return struct.pack("!B", MID_WRITE)
 
 def create_end_write(chksum: int) -> bytes:
     return struct.pack("!BI", END_WRITE, chksum)
@@ -92,8 +96,8 @@ def create_start_read(fn: str) -> bytes:
 def create_start_compute(fn: str) -> bytes:
     return struct.pack("!B80s", START_COMPUTE, pad_filename(fn))
 
-def create_poll_compute() -> bytes:
-    return struct.pack("!B", POLL_COMPUTE)
+def create_poll_compute(fn: str) -> bytes:
+    return struct.pack("!B80s", POLL_COMPUTE, pad_filename(fn))
 
 def create_delete_packet(fn: str) -> bytes:
     return struct.pack("!B80s", DELETE, pad_filename(fn))
@@ -101,13 +105,10 @@ def create_delete_packet(fn: str) -> bytes:
 # ### FSMs #################
 def fsm_write(sock, path, user_id):
     ext = os.path.splitext(path)[1].lower()
-    if ext in ('.jpg','.jpeg'):
-        img = Image.open(path).convert('RGB').resize((224,224))
-        buf = io.BytesIO()
-        img.save(buf, format='PNG', optimize=True, compress_level=9)
-        data = buf.getvalue()
-    else:
-        data = open(path,'rb').read()
+    img = Image.open(path).convert('RGB').resize((224,224))
+    buf = io.BytesIO()
+    img.save(buf, format='PNG', optimize=True, compress_level=9)
+    data = buf.getvalue()
 
     print(f"STORE on FILENAME: {path} | ext: {ext}")
 
@@ -124,10 +125,11 @@ def fsm_write(sock, path, user_id):
 
     # START
     sock.sendall(create_start_write(fn))
-    if not wait_for_ack(sock, START_WRITE):
-        raise RuntimeError("No START_WRITE ACK")
+    ret = wait_for_ack(sock, START_WRITE)
+    if (ret == -2): raise RuntimeError("No START_WRITE ACK")
+    elif (ret == -1): raise Exception("Way busy!")
 
-    # DATA + MID
+    # DATA 
     for i in range(n_pkts):
         chunk = data[i*DATA_PACKET_SIZE:(i+1)*DATA_PACKET_SIZE]
         pkt_start = time.perf_counter()
@@ -137,17 +139,13 @@ def fsm_write(sock, path, user_id):
         x_dur = pkt_end - pkt_start 
         print(f"[recv] DATA_WRITE_LEN: {len(chunk)} bytes -> {x_dur:.3f}s")
 
-        if i == mid_i:
-            sock.sendall(create_mid_write())
-            if not wait_for_ack(sock, MID_WRITE):
-                raise RuntimeError("No MID_WRITE ACK")
-
     # END
     chksum = checksum32(data)
     print(f"Sent END packet (write) with checksum {chksum:#010x}")
     sock.sendall(create_end_write(chksum))
-    if not wait_for_ack(sock, END_WRITE):
-        raise RuntimeError("No END_WRITE ACK")
+    ret = wait_for_ack(sock, END_WRITE)
+    if (ret == -2): raise RuntimeError("No END_WRITE ACK")
+    elif (ret == -1): raise Exception("Way busy!") # should'nt hit
 
     end_all = time.perf_counter()
     duration = end_all - start_all
@@ -157,14 +155,14 @@ def fsm_write(sock, path, user_id):
     print(f"  Duration:   {duration:.3f}s")
     print(f"  Throughput: {rate:.2f} bytes/s")
 
-
 def fsm_read(sock, out_path, user_id):
     fn = f"{user_id}_{os.path.basename(out_path)}"
-    print(f"READ on FILENAME: {out_path}")
+    print(f"READ on FILENAME: {fn}")
 
     sock.sendall(create_start_read(fn))
-    if not wait_for_ack(sock, START_READ):
-        raise RuntimeError("No START_READ ACK")
+    ret = wait_for_ack(sock, START_READ)
+    if (ret == -2): raise RuntimeError("No START_READ ACK")
+    elif (ret == -1): raise Exception("Way busy!")
 
     f = open(out_path,'wb')
     total_recv = 0
@@ -191,7 +189,8 @@ def fsm_read(sock, out_path, user_id):
             print(f"[recv] END_READ_CHECKSUM: {' '.join(f'0x{b:02X}' for b in checksum_bytes)}")
             remote = struct.unpack("!I", checksum_bytes)[0]
             if (remote>>24)&0xFF == FILE_NOT_FOUND_ERR:
-                raise FileNotFoundError(fn)
+                f.close()
+                raise RuntimeError(fn)
             break
 
         else:
@@ -208,38 +207,41 @@ def fsm_read(sock, out_path, user_id):
     print(f"  Throughput (including I/O + Control Logic):  {rate:.2f} bytes/s")
     print(f"  Checksum:    {remote:08X}")
 
-
 def fsm_compute(sock, path, user_id):
     fn = f"{user_id}_{os.path.basename(path)}"
-    print(f"COMPUTE on FILENAME: {path}")
+    print(f"COMPUTE on FILENAME: {fn}")
 
     sock.sendall(create_start_compute(fn))
     resp = sock.recv(2)
     print(f"[recv] START_COMPUTE_REPLY: {' '.join(f'0x{b:02X}' for b in resp)}")
     if not resp or resp[0] != START_COMPUTE:
-        if resp and resp[0]==FUC:
-            print("FUC received instead of START_COMPUTE")
-            return
+        if resp and resp[0] == FUC:
+            raise RuntimeError("FUC received instead of START_COMPUTE")
+        if resp and resp[0] == WAY_BUSY: 
+            raise Exception("WAY BUSY")
         raise RuntimeError("Failed to start compute")
 
-    sock.settimeout(15)
-    while True:
-        time.sleep(2.5)
-        sock.sendall(create_poll_compute())
-        resp = sock.recv(2)
-        print(f"[recv] POLL_COMPUTE_REPLY: {' '.join(f'0x{b:02X}' for b in resp)}")
-        if resp[0] == END_COMPUTE:
-            if len(resp)>1 and resp[1]==FILE_NOT_FOUND_ERR:
-                raise FileNotFoundError(fn)
-            print("COMPUTE complete")
-            break
-        elif resp[0] == WAIT_COMPUTE:
-            print("COMPUTE in progress...")
-        elif resp[0] == FUC:
-            print("FUC received during polling")
-            return
-        else:
-            raise RuntimeError(f"Unexpected POLL pkt: {resp[0]:02X}")
+def fsm_compute_poll(sock, path, user_id): 
+    fn = f"{user_id}_{os.path.basename(path).split('.')[0]}_results.txt"
+    print(f"COMPUTE POLL on filename: {fn}")
+
+    sock.sendall(create_poll_compute(fn))
+    resp = sock.recv(2)
+    print(f"[recv] POLL_COMPUTE_REPLY: {' '.join(f'0x{b:02X}' for b in resp)}")
+    if resp[0] == END_COMPUTE:
+        flag = resp[1]
+        print(flag)
+        if flag&0xFF == FILE_NOT_FOUND_ERR:
+            raise RuntimeError(fn)
+        print("COMPUTE complete")
+    elif resp[0] == WAIT_COMPUTE:
+        print("COMPUTE in progress...")
+    elif resp[0] == FUC:
+        raise Exception("FUC received")
+    elif resp[0] == WAY_BUSY:
+        raise Exception("WAY BUSY")
+    else:
+        raise RuntimeError(f"Unexpected POLL pkt: {resp[0]:02X}")
 
 
 def fsm_delete(sock, path, user_id):
@@ -259,33 +261,38 @@ def fsm_delete(sock, path, user_id):
 
 # ### Main #################
 def main():
-    if len(sys.argv)!=6:
-        print("Usage: test_routines.py <port> <IP> <file> <mode> <user_id>")
+    if len(sys.argv)!=3:
+        print("Usage: test_routines.py <file> <mode>")
         sys.exit(1)
 
-    port    = int(sys.argv[1])
-    ip      = sys.argv[2]
-    filearg = os.path.join(INPUT_DIR, sys.argv[3])
-    mode    = sys.argv[4].lower()
-    user_id = sys.argv[5]
+    port    = 8080
+    ip      = "192.168.0.50"
+    user_id = "user01" # sys.argv[3]
+    filearg = os.path.join(INPUT_DIR, sys.argv[1])
+    mode    = sys.argv[2].lower()
 
     print(f"OPERATION: {mode} | USER_ID: {user_id}")
 
     print("Connecting over Socket")
+
+
     with socket.create_connection((ip,port), timeout=5) as sock:
         t0 = time.perf_counter()
         print("Opened Socket!")
         if mode=="write":
+            assert os.path.exists(filearg), f"No such file or directory: {filearg}"
             fsm_write(sock, filearg, user_id)
         elif mode=="read":
             out = os.path.join(RESULTS_DIR, os.path.basename(filearg))
             fsm_read(sock, out, user_id)
         elif mode=="compute":
             fsm_compute(sock, filearg, user_id)
+        elif mode=="compute_poll":
+            fsm_compute_poll(sock, filearg, user_id)
         elif mode=="delete":
             fsm_delete(sock, filearg, user_id)
         else:
-            raise ValueError("mode must be write/read/compute/delete")
+            raise ValueError("mode must be write/read/compute/compute_poll/delete")
         t1 = time.perf_counter()
 
     total = (t1-t0)*1000
@@ -300,7 +307,8 @@ if __name__=="__main__":
     main()
 
 # Even if it's a JPG, or JPEG, we convert it into PNG. 
-# python3 test_routines.py 8080 192.168.0.50 chiahua.jpg write user01
-# python3 test_routines.py 8080 192.168.0.50 chiahua.jpg read user01
-# python3 test_routines.py 8080 192.168.0.50 chiahua.jpg compute user01
-# python3 test_routines.py 8080 192.168.0.50 chiahua.jpg delete user01
+    # python3 test_routines.py combined.png write 
+    # python3 test_routines.py combined.png read 
+    # python3 test_routines.py combined.png compute 
+    # python3 test_routines.py combined.png compute_poll 
+    # python3 test_routines.py combined.png delete 

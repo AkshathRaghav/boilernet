@@ -1,0 +1,24 @@
+2025-05-02 02:26:42,389 INFO Opening socket to 192.168.0.50:8080
+2025-05-02 02:26:42,487 INFO Socket opened
+2025-05-02 02:26:42,487 INFO OP store START: job=userA task=1
+2025-05-02 02:26:42,487 INFO Socket closed
+2025-05-02 02:26:42,498 INFO Opening socket to 192.168.0.50:8080
+2025-05-02 02:26:42,502 INFO Socket opened
+2025-05-02 02:26:42,502 INFO OP fetch START: job=userA task=1
+2025-05-02 02:26:42,503 INFO Socket closed
+2025-05-02 02:26:42,513 INFO Opening socket to 192.168.0.50:8080
+2025-05-02 02:26:43,614 INFO Socket opened
+2025-05-02 02:26:43,615 INFO OP purge START: job=userA task=1
+2025-05-02 02:26:43,615 INFO Socket closed
+2025-05-02 02:26:43,625 INFO Opening socket to 192.168.0.50:8080
+2025-05-02 02:26:43,630 INFO Socket opened
+2025-05-02 02:26:43,630 INFO OP store START: job=userB task=2
+2025-05-02 02:26:43,630 INFO Socket closed
+2025-05-02 02:26:43,640 INFO Opening socket to 192.168.0.50:8080
+2025-05-02 02:26:44,691 INFO Socket opened
+2025-05-02 02:26:44,692 INFO OP fetch START: job=userB task=2
+2025-05-02 02:26:44,692 INFO Socket closed
+2025-05-02 02:26:44,702 INFO Opening socket to 192.168.0.50:8080
+2025-05-02 02:26:44,707 INFO Socket opened
+2025-05-02 02:26:44,707 INFO OP purge START: job=userB task=2
+2025-05-02 02:26:44,708 INFO Socket closed

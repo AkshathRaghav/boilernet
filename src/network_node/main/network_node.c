@@ -1,6 +1,32 @@
 #include "network_node.h"
 
+uint8_t way_flipper = 0; 
 
+// ##############################################################################
+
+void led_on() { 
+  vTaskDelay(pdMS_TO_TICKS(2));
+  gpio_set_level(LED_NUM, 1);  
+}
+
+
+void led_off() { 
+  vTaskDelay(pdMS_TO_TICKS(2));
+  gpio_set_level(LED_NUM, 0);  
+}
+
+static void configure_led(void)
+{
+    gpio_config_t led_conf = {
+        .pin_bit_mask = (1ULL << LED_NUM),   
+        .mode         = GPIO_MODE_OUTPUT,                
+        .pull_up_en   = GPIO_PULLUP_DISABLE,             
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,           
+        .intr_type    = GPIO_INTR_DISABLE,               
+    };
+    gpio_config(&led_conf);
+}
+ 
 // ################################################################
 
 static esp_err_t SDCardInit(void) {
@@ -15,28 +41,11 @@ static esp_err_t SDCardInit(void) {
     sdmmc_host_t host = SDSPI_HOST_DEFAULT();
     host.slot = SD_HOST; 
 
-    spi_bus_config_t bus_cfg = {
-        .mosi_io_num = SD_NUM_MOSI,
-        .miso_io_num = SD_NUM_MISO,
-        .sclk_io_num = SD_NUM_CLK,
-        .quadwp_io_num = -1,
-        .quadhd_io_num = -1,
-        .max_transfer_sz = 2048,
-    };
-
-    esp_err_t ret; 
-    host.max_freq_khz = 5200;
-    ret = spi_bus_initialize(host.slot, &bus_cfg, SDSPI_DEFAULT_DMA);
-    if (ret != ESP_OK) {
-        ESP_LOGE("SDCARD", "Failed to initialize SPI bus for SD card: %s", esp_err_to_name(ret));
-        return ret;
-    }
-
     sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
     slot_config.gpio_cs = SD_NUM_CS;
     slot_config.host_id = host.slot;
 
-    ret = esp_vfs_fat_sdspi_mount(mount_point, &host, &slot_config, &mount_config, &card);
+    esp_err_t ret = esp_vfs_fat_sdspi_mount(mount_point, &host, &slot_config, &mount_config, &card);
     if (ret != ESP_OK) {
         ESP_LOGE("SDCARD", "Failed to mount SD card: %s", esp_err_to_name(ret));
         return ret;
@@ -108,7 +117,7 @@ static int read_sdcard_entry(const char *filename) {
     if (sdcard_read(file, &value, sizeof(value)) != sizeof(value)) {
         ESP_LOGE("SDCARD", "Failed to read data from file: %s", filename);
         sdcard_close(file);
-        return -1;
+        return -3;
     }
 
     sdcard_close(file);
@@ -119,28 +128,93 @@ static int read_sdcard_entry(const char *filename) {
         return 1;
     } else {
         ESP_LOGW("SDCARD", "Unexpected value 0x%02X in file: %s", value, filename);
-        return -1;
+        return -3;
     }
+    // 0, 1 -> Correct Way 
+    // -1 -> File not found 
+    // -3 -> Error
 }
 
 static bool gpio_is_high(gpio_num_t pin) {
     return gpio_get_level(pin) == 1;
 }
 
-int8_t choose_way(const char *filename) { 
-    int8_t way = read_sdcard_entry(filename); 
+bool make_result_filename(const char *in, char *out, size_t out_sz) {
+    const char *dot = strrchr(in, '.');
+    size_t base_len = dot ? (size_t)(dot - in) : strlen(in);
 
-    if (way != -1) { // file present somewhere
-        if (!gpio_is_high(switch_handshake_pins[way])) return -1; // way busy
-        else return way; // way free
+    const char *suffix = "_results.txt";
+    size_t suffix_len = strlen(suffix);
+
+    if (base_len + suffix_len + 1 > out_sz) {
+        return false;
     }
+
+    for (size_t i = 0; i < base_len; i++) {
+        out[i] = (char) tolower((unsigned char)in[i]);
+    }
+    memcpy(out + base_len, suffix, suffix_len + 1); 
+
+    return true;
+}
+
+int8_t choose_way(const char *filename, int8_t* compute_ids, int delete, int poll) { 
+    int8_t way = read_sdcard_entry(filename);
+
+    ESP_LOGW(COMM_TAG, "Compute ID: (%d, %d), Delete: %d, Poll: %d, Way (tmp): %d", compute_ids[0], compute_ids[1], delete, poll, way); 
+
+    if (way >= 0) { // file present somewhere
+        if (compute_ids[way]) { 
+            if (!poll) return -1; // say way_busy, but it's computing, and it's not poll
+            else return way; // we're polling, and it needs to be this way 
+        }
+        else { 
+            ESP_LOGW(COMM_TAG, "CHOSEN WAY: %d", way); 
+            return way; // way free
+        } 
+    } else if (way == -3) {
+        return way; 
+    }
+
+    if (delete && (way == -1)) {
+        return 4; // DELETE and file not found, don't need to choose a way 
+    }
+
+    char result_filename[100] = {0};
+    if (!make_result_filename(filename, result_filename, sizeof(result_filename))) {
+        ESP_LOGE(COMM_TAG, "Filename too long for buffer");
+    }
+    ESP_LOGW(COMM_TAG, "Result Filename: %s", result_filename); 
 
     // file not present anywhere; fair game 
-    for (int i = 0; i < NUM_SWITCH_NODES; i++) { 
-        if (gpio_is_high(switch_handshake_pins[i])) return i; // way free
-    }
+    ESP_LOGW(COMM_TAG, "WAY FLIPPER: %d", way_flipper);
+    if (!way_flipper) {
+        for (int i = 0; i < NUM_SWITCH_NODES; i++)
+        {
+            if (compute_ids[i]) continue;
 
-    return -1;
+            if (gpio_is_high(switch_handshake_pins[i])) {
+                create_sdcard_entry(filename, (i) ? 0xBB : 0xAA);
+                create_sdcard_entry(result_filename, (i) ? 0xBB : 0xAA);
+                ESP_LOGW(COMM_TAG, "CHOSEN WAY: %d", i); 
+                way_flipper = (way_flipper) ? 0 : 1; 
+                return i; // way free
+            }
+        }
+    } else { 
+        for (int i = (NUM_SWITCH_NODES - 1); i >= 0; i--) { 
+            if (compute_ids[i]) continue;
+
+            if (gpio_is_high(switch_handshake_pins[i])) {
+                create_sdcard_entry(filename, (i) ? 0xBB : 0xAA);
+                create_sdcard_entry(result_filename, (i) ? 0xBB : 0xAA);
+                ESP_LOGW(COMM_TAG, "CHOSEN WAY: %d", i); 
+                way_flipper = (way_flipper) ? 0 : 1; 
+                return i; // way free
+            }
+        }
+    }
+    return -1; // way busy
 }
 
 // ################################################################
@@ -379,7 +453,7 @@ static int recv_all(int sock, void *buffer, size_t len) {
     uint8_t *buf = (uint8_t *)buffer;
     while (received < len) {
         int r = recv(sock, buf + received, len - received, 0);
-        if (r <= 0) {
+        if (r < 0) {
             return -1;
         }
         received += r;
@@ -387,7 +461,7 @@ static int recv_all(int sock, void *buffer, size_t len) {
     return 0;
 }
 
-int fsm_file_read_master(int sock, spi_transaction_t t, uint8_t *dummy_tx_buf, uint8_t *rx_buf, uint8_t switch_id) {
+int fsm_file_read_master(int sock, spi_transaction_t t, uint8_t *dummy_tx_buf, uint8_t *rx_buf, uint8_t switch_id, const char *filename) {
     int ret, data_len;
     unsigned int computed_checksum = 0;
     unsigned int received_data = 0;
@@ -457,6 +531,17 @@ int fsm_file_read_master(int sock, spi_transaction_t t, uint8_t *dummy_tx_buf, u
             ESP_LOGI(COMM_TAG, "END_READ packet: Slave checksum = 0x%08X, Computed checksum = 0x%08X",
                      slave_checksum, computed_checksum);
                     
+            if (rx_buf[1] == 0xFF) {
+                char result_filename[100] = {0};
+                if (!make_result_filename(filename, result_filename, sizeof(result_filename))) {
+                    ESP_LOGE(COMM_TAG, "Filename too long for buffer");
+                }
+                ESP_LOGW(COMM_TAG, "Result filename also to be deleted: %s", result_filename); 
+
+                sdcard_delete(filename); 
+                sdcard_delete(result_filename); 
+            }
+
             // Forward the END_READ packet to the router.
             if (send(sock, rx_buf, 5, 0) < 0) {
                 ESP_LOGE(COMM_TAG, "Failed to send END_READ packet to router");
@@ -525,80 +610,100 @@ static void tcp_server_task(void *pvParameters)
         return;
     }
 
+    int8_t* compute_ids;
+    compute_ids = malloc(NUM_SWITCH_NODES * sizeof(int8_t));
+    for (int i = 0; i < NUM_SWITCH_NODES; i++) {
+        compute_ids[i] = 0;
+    }; 
 
-    while (1) {
-        ESP_LOGI(COMM_TAG, "Socket listening");
+    while (1)
+        {
+            ESP_LOGI(COMM_TAG, "Socket listening");
 
-        struct sockaddr_storage source_addr;
-        socklen_t addr_len = sizeof(source_addr);
-        ESP_LOGI(COMM_TAG, "Waiting for a connection...");
+            struct sockaddr_storage source_addr;
+            socklen_t addr_len = sizeof(source_addr);
+            ESP_LOGI(COMM_TAG, "Waiting for a connection...");
 
-        // Accept incoming connection (blocking call)
-        int sock = accept(listen_sock, (struct sockaddr *)&source_addr, &addr_len);
-        if (sock < 0) {
-            ESP_LOGE(COMM_TAG, "Unable to accept connection: errno %d", errno);
-            break;
-        }
-        
-        // Set TCP keepalive options
-        setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &keepAlive, sizeof(int));
-        setsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE, &keepIdle, sizeof(int));
-        setsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL, &keepInterval, sizeof(int));
-        setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT, &keepCount, sizeof(int));
-
-        if (source_addr.ss_family == PF_INET) {
-            inet_ntoa_r(((struct sockaddr_in *)&source_addr)->sin_addr, addr_str, sizeof(addr_str) - 1);
-        }
-        ESP_LOGI(COMM_TAG, "Connection accepted from %s", addr_str);
-
-        // Initialize FSM state and checksum accumulator
-        fsm_state_t state = FSM_WAIT_START_WRITE;
-        unsigned int computed_checksum = 0;
-        unsigned int expected_total_data = 0;
-        unsigned int received_data = 0;
-        uint8_t previous_spi_packet = 0; // For the very first transaction, no previous packet is expected.
-        uint16_t previous_spi_paacket_len = 0; 
-        uint8_t *previous_data_chunk = NULL; 
-        uint16_t data_len = 0;
-        int8_t switch_id = 0; 
-
-        uint8_t *tx_buf = heap_caps_malloc(TRANSFER_SIZE, MALLOC_CAP_DMA);
-        uint8_t *rx_buf = heap_caps_malloc(TRANSFER_SIZE, MALLOC_CAP_DMA);
-        uint8_t *expected_rx_buf = heap_caps_malloc(TRANSFER_SIZE, MALLOC_CAP_DMA);
-    
-        spi_transaction_t t = {0};
-        t.length = TRANSFER_SIZE * 8;
-
-        if (!tx_buf || !rx_buf || !expected_rx_buf) {
-            ESP_LOGE(COMM_TAG, "Heap allocation failed for SPI buffers");
-            if (tx_buf) free(tx_buf);
-            if (rx_buf) free(rx_buf);
-            if (expected_rx_buf) free(expected_rx_buf);
-            state = FSM_ERROR;
-        }
-        memset(tx_buf, 0, TRANSFER_SIZE);
-        memset(rx_buf, 0, TRANSFER_SIZE);
-        memset(expected_rx_buf, 0, TRANSFER_SIZE);
-
-        uint64_t t_end = 0; 
-        uint64_t t_start = esp_timer_get_time(); 
-
-        while (state != FSM_COMPLETE && state != FSM_ERROR) {
-
-            t_end = esp_timer_get_time(); 
-
-            printf("Elapsed: %lld μs\n",
-                t_end - t_start);
-
-            uint8_t pkt_type;
-            if (recv_all(sock, &pkt_type, 1) != 0) {
-                ESP_LOGE(COMM_TAG, "Failed to read packet type");
-                state = FSM_ERROR;
+            // Accept incoming connection (blocking call)
+            int sock = accept(listen_sock, (struct sockaddr *)&source_addr, &addr_len);
+            if (sock < 0)
+            {
+                ESP_LOGE(COMM_TAG, "Unable to accept connection: errno %d", errno);
                 break;
             }
-            t_start = esp_timer_get_time(); 
-           
-            switch(pkt_type) {
+
+            // Set TCP keepalive options
+            setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &keepAlive, sizeof(int));
+            setsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE, &keepIdle, sizeof(int));
+            setsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL, &keepInterval, sizeof(int));
+            setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT, &keepCount, sizeof(int));
+
+            if (source_addr.ss_family == PF_INET)
+            {
+                inet_ntoa_r(((struct sockaddr_in *)&source_addr)->sin_addr, addr_str, sizeof(addr_str) - 1);
+            }
+            ESP_LOGI(COMM_TAG, "Connection accepted from %s", addr_str);
+
+            // Initialize FSM state and checksum accumulator
+            fsm_state_t state = FSM_WAIT_START_WRITE;
+            unsigned int computed_checksum = 0;
+            unsigned int expected_total_data = 0;
+            unsigned int received_data = 0;
+            uint8_t previous_spi_packet = 0; // For the very first transaction, no fprevious packet is expected.
+            uint16_t previous_spi_paacket_len = 0;
+            uint8_t *previous_data_chunk = NULL;
+            uint16_t data_len = 0;
+            int8_t switch_id = 0;
+            int ignore = 0;
+
+            uint8_t *tx_buf = heap_caps_malloc(TRANSFER_SIZE, MALLOC_CAP_DMA);
+            uint8_t *rx_buf = heap_caps_malloc(TRANSFER_SIZE, MALLOC_CAP_DMA);
+            uint8_t *expected_rx_buf = heap_caps_malloc(TRANSFER_SIZE, MALLOC_CAP_DMA);
+
+            spi_transaction_t t = {0};
+            t.length = TRANSFER_SIZE * 8;
+
+            if (!tx_buf || !rx_buf || !expected_rx_buf)
+            {
+                ESP_LOGE(COMM_TAG, "Heap allocation failed for SPI buffers");
+                if (tx_buf)
+                    free(tx_buf);
+                if (rx_buf)
+                    free(rx_buf);
+                if (expected_rx_buf)
+                    free(expected_rx_buf);
+                state = FSM_ERROR;
+            }
+            memset(tx_buf, 0, TRANSFER_SIZE);
+            memset(rx_buf, 0, TRANSFER_SIZE);
+            memset(expected_rx_buf, 0, TRANSFER_SIZE);
+
+            uint64_t t_end = 0;
+            uint64_t t_start = esp_timer_get_time();
+
+            led_on();
+
+            while (state != FSM_COMPLETE && state != FSM_ERROR && state != FSM_WAY_BUSY)
+            {
+
+                t_end = esp_timer_get_time();
+
+                printf("Elapsed: %lld μs\n",
+                       t_end - t_start);
+
+                uint8_t pkt_type;
+                int ret_recv_all = recv_all(sock, &pkt_type, 1);
+
+                if (ret_recv_all != 0)
+                {
+                    ESP_LOGE(COMM_TAG, "Failed to read packet type: 0x%02X, %d", pkt_type, ret_recv_all);
+                    state = FSM_ERROR;
+                    break;
+                }
+                t_start = esp_timer_get_time();
+
+                switch (pkt_type)
+                {
                 // ---------- Write FSM handling  ------------
                 case PACKET_TYPE_START_WRITE: {
                     if (state != FSM_WAIT_START_WRITE) {
@@ -623,11 +728,12 @@ static void tcp_server_task(void *pvParameters)
                     tx_buf[1] = 0x00;
                     memcpy(tx_buf + 2, filename_payload, 80);
 
-                    // switch_id = choose_way(filename);
+                    switch_id = choose_way(filename, compute_ids, 0, 0);
 
                     if (switch_id < 0) { 
                         ESP_LOGE(COMM_TAG, "Way selection failed!");
-                        state = FSM_ERROR;
+                        if (switch_id == -3) state = FSM_ERROR;
+                        else if (switch_id == -1) state = FSM_WAY_BUSY; 
                         break;
                     }
 
@@ -644,6 +750,7 @@ static void tcp_server_task(void *pvParameters)
                         state = FSM_ERROR;
                         break;
                     }
+                    ESP_LOGW(COMM_TAG, "Sent START ACK");
                     state = FSM_WAIT_DATA_WRITE;
                     break;
                 }
@@ -684,36 +791,6 @@ static void tcp_server_task(void *pvParameters)
                         computed_checksum += tx_buf[4 + i];
                     }
                     received_data += data_len;
-
-                    break;
-                }
-                case PACKET_TYPE_MID_WRITE: {
-                    uint8_t mid_buf[2];
-                    if (recv_all(sock, mid_buf, sizeof(mid_buf)) != 0) {
-                        ESP_LOGE(COMM_TAG, "Failed to read MID packet payload");
-                        state = FSM_ERROR;
-                        break;
-                    }
-                    ESP_LOGI(COMM_TAG, "!!!!~MID packet received~!!!!");
-
-                    tx_buf[0] = PACKET_TYPE_MID_WRITE; 
-                    // memset(tx_buf + 2, 0, TRANSFER_SIZE - 2);
-                    if (spi_send_packet(t, tx_buf, rx_buf, expected_rx_buf, switch_id) != 0)
-                    {
-                        ESP_LOGE(COMM_TAG, "SPI DATA packet verification failed.");
-                        state = FSM_ERROR;
-                        break;
-                    }
-                    expected_rx_buf[0] = PACKET_TYPE_MID_WRITE;
-                    expected_rx_buf[1] = tx_buf[1];
-                    // memset(expected_rx_buf + 2, 0, TRANSFER_SIZE - 2);
-
-                    if (send(sock, &pkt_type, 1, 0) < 0) {
-                        ESP_LOGE(COMM_TAG, "Failed to send MID ACK");
-                        state = FSM_ERROR;
-                        break;
-                    }
-                    state = FSM_WAIT_DATA_WRITE; 
 
                     break;
                 }
@@ -777,15 +854,15 @@ static void tcp_server_task(void *pvParameters)
                     filename[79] = '\0';
                     ESP_LOGI(COMM_TAG, "START_READ: Filename: %s", filename);
                     
-                    // switch_id = choose_way(filename);
+                    switch_id = choose_way(filename, compute_ids, 0, 0);
 
                     if (switch_id < 0) { 
                         ESP_LOGE(COMM_TAG, "Way selection failed!");
-                        state = FSM_ERROR;
+                        if (switch_id == -3) state = FSM_ERROR;
+                        else if (switch_id == -1) state = FSM_WAY_BUSY; 
                         break;
                     }
 
-                    // Forward the read command to the slave via SPI.
                     tx_buf[0] = PACKET_TYPE_START_READ;
                     tx_buf[1] = 0x00;
                     memcpy(tx_buf + 2, filename_payload, 80);
@@ -795,23 +872,19 @@ static void tcp_server_task(void *pvParameters)
                         break;
                     }
                     
-                    // Send an ACK back to the router for the START_READ command.
                     if (send(sock, &pkt_type, 1, 0) < 0) {
                         ESP_LOGE(COMM_TAG, "Failed to send START_READ ACK");
                         state = FSM_ERROR;
                         break;
                     }
                     
-                    // Transition to the state for reading data from the slave.
                     state = FSM_WAIT_DATA_READ;
                     
-                    // Now call the new read FSM that reads data over SPI and sends it over Ethernet.
-                    if (fsm_file_read_master(sock, t, tx_buf, rx_buf, switch_id) != 0) {
+                    if (fsm_file_read_master(sock, t, tx_buf, rx_buf, switch_id, filename) != 0) {
                         ESP_LOGE(COMM_TAG, "FSM file read on Master failed.");
                         state = FSM_ERROR;
                     }
                     
-                    // After the read FSM completes, mark the overall transaction as complete.
                     state = FSM_COMPLETE;
                     break;
                 }
@@ -835,6 +908,15 @@ static void tcp_server_task(void *pvParameters)
                     memcpy(filename, filename_payload, 79);
                     filename[79] = '\0';
                     ESP_LOGI(COMM_TAG, "START_READ: Filename: %s", filename);
+
+                    switch_id = choose_way(filename, compute_ids, 0, 0);
+
+                    if (switch_id < 0) { 
+                        ESP_LOGE(COMM_TAG, "Way selection failed!");
+                        if (switch_id == -3) state = FSM_ERROR;
+                        else if (switch_id == -1) state = FSM_WAY_BUSY; 
+                        break;
+                    }
                     
                     // Forward the read command to the slave via SPI.
                     tx_buf[0] = PACKET_TYPE_START_COMPUTE;
@@ -857,7 +939,7 @@ static void tcp_server_task(void *pvParameters)
                     uint8_t slave_response = rx_buf[0];
                     if (slave_response == PACKET_TYPE_FUC) {
                         ESP_LOGE(COMM_TAG, "Slave returned FUC during compute startup.");
-                        if (send(sock, rx_buf, 1, 0) < 0) {
+                        if (send(sock, rx_buf, 2, 0) < 0) {
                             ESP_LOGE(COMM_TAG, "Failed to forward FUC to router.");
                         }
                         state = FSM_ERROR;
@@ -878,15 +960,19 @@ static void tcp_server_task(void *pvParameters)
                         }
                     } else if (slave_response == PACKET_TYPE_START_COMPUTE) {
                         ESP_LOGI(COMM_TAG, "Slave confirmed compute start.");
-                        // Forward the slave's confirmation to the router.
-                        if (send(sock, rx_buf, 1, 0) < 0) {
+                        compute_ids[switch_id] = 1; 
+                        ESP_LOGW(COMM_TAG, "COMPUTE WAY: %d, %d", compute_ids[0], compute_ids[1]);
+                        if (send(sock, rx_buf, 2, 0) < 0)
+                        {
                             ESP_LOGE(COMM_TAG, "Failed to forward START_COMPUTE ACK to router.");
                             state = FSM_ERROR;
                             break;
                         }
-                        // Transition to the compute polling state.
-                        state = FSM_WAIT_COMPUTE;
-                    } else {
+                        state = FSM_COMPLETE;
+                        ignore = 1; 
+                    }
+                    else
+                    {
                         ESP_LOGE(COMM_TAG, "Unexpected slave response during compute startup: 0x%02X", slave_response);
                         state = FSM_ERROR;
                         break;
@@ -894,13 +980,35 @@ static void tcp_server_task(void *pvParameters)
                     break;
                 }
                 case PACKET_TYPE_POLL_COMPUTE: {
-                    if (state != FSM_WAIT_COMPUTE) {
+                    if (state != FSM_WAIT_START_WRITE) {
                         ESP_LOGE(COMM_TAG, "Unexpected POLL_COMPUTE packet in state %d", state);
                         state = FSM_ERROR;
                         break;
                     }
-                    ESP_LOGI(COMM_TAG, "Received POLL_COMPUTE from router. Polling slave for compute status.");
+                    ESP_LOGI(COMM_TAG, "Received POLL_COMPUTE from router.");
+
+                    uint8_t filename_payload[80];
+                    if (recv_all(sock, filename_payload, sizeof(filename_payload)) != 0) {
+                        ESP_LOGE(COMM_TAG, "Failed to read START_READ filename payload");
+                        state = FSM_ERROR;
+                        break;
+                    }
+                    char filename[80];
+                    memcpy(filename, filename_payload, 79);
+                    filename[79] = '\0';
+
                     
+                    switch_id = choose_way(filename, compute_ids, 0, 1);
+
+                    if (switch_id < 0) { 
+                        ESP_LOGE(COMM_TAG, "Way selection failed!");
+                        if (switch_id == -3) state = FSM_ERROR;
+                        else if (switch_id == -1) state = FSM_WAY_BUSY; 
+                        break;
+                    }
+
+                    ESP_LOGI(COMM_TAG, "Polling slave for compute status.");
+
                     tx_buf[0] = PACKET_TYPE_POLL_COMPUTE;
                     if (spi_send_packet(t, tx_buf, rx_buf, NULL, switch_id) != 0) {
                         ESP_LOGE(COMM_TAG, "SPI POLL_COMPUTE transaction failed.");
@@ -946,7 +1054,6 @@ static void tcp_server_task(void *pvParameters)
                             ESP_LOGE(COMM_TAG, "Failed to forward WAIT_COMPUTE to router.");
                             state = FSM_ERROR;
                         }
-                        // Stay in FSM_WAIT_COMPUTE state.
                     } else if (poll_response == PACKET_TYPE_END_COMPUTE) {
                         uint8_t flag = rx_buf[1];
                         if (flag == 0xFF) {
@@ -963,10 +1070,13 @@ static void tcp_server_task(void *pvParameters)
                             } else {
                                 state = FSM_COMPLETE;
                             }
+                            compute_ids[switch_id] = 0; 
                         }
                     } else if (poll_response == PACKET_TYPE_FUC) {
                         ESP_LOGE(COMM_TAG, "Slave returned FUC during compute polling.");
                         state = FSM_ERROR;
+                    } else if (poll_response == 0x00) { 
+                        ESP_LOGE(COMM_TAG, "Compute not in progress! Slave returned 0x00");
                     } else {
                         ESP_LOGE(COMM_TAG, "Unexpected slave response during compute polling: 0x%02X", poll_response);
                         state = FSM_ERROR;
@@ -994,11 +1104,24 @@ static void tcp_server_task(void *pvParameters)
                     filename[79] = '\0';
                     ESP_LOGI(COMM_TAG, "DELETE: Filename: %s", filename);
                     
-                    // switch_id = choose_way(filename);
+                    switch_id = choose_way(filename, compute_ids, 1, 0);
 
                     if (switch_id < 0) { 
                         ESP_LOGE(COMM_TAG, "Way selection failed!");
-                        state = FSM_ERROR;
+                        if (switch_id == -3) state = FSM_ERROR;
+                        else if (switch_id == -1) state = FSM_WAY_BUSY; 
+                        break;
+                    }
+
+                    if (switch_id == 4) {
+                        rx_buf[0] = PACKET_TYPE_DELETE_RET;
+                        rx_buf[1] = 0xAA;
+                        if (send(sock, rx_buf, 2, 0) < 0)
+                        {
+                            ESP_LOGE(COMM_TAG, "Failed to forward DELETE error to router.");
+                        }
+                        state = FSM_COMPLETE;
+                        ignore = 1; 
                         break;
                     }
 
@@ -1029,9 +1152,9 @@ static void tcp_server_task(void *pvParameters)
                         break;
                     } else if (rx_buf[0] == PACKET_TYPE_DELETE_RET) {
                         if (rx_buf[1] == 0xAA) { 
-                            ESP_LOGI(COMM_TAG, "Slave reported DELETE completion (flag: 0xDD).");
+                            ESP_LOGI(COMM_TAG, "Slave reported DELETE completion (flag: 0xAA).");
                             if (send(sock, rx_buf, 2, 0) < 0) {
-                                ESP_LOGE(COMM_TAG, "Failed to forward DELETE error to router.");
+                                ESP_LOGE(COMM_TAG, "Failed to forward DELETE success to router.");
                             }
                             state = FSM_COMPLETE; // SUCCESS!!
                             sdcard_delete(filename);
@@ -1063,23 +1186,26 @@ static void tcp_server_task(void *pvParameters)
             } 
         } 
 
+        led_off(); 
+
         if (state == FSM_COMPLETE) {
-            ESP_LOGI(COMM_TAG, "Image transfer complete. Total data received: %u bytes", received_data);
-            memset(tx_buf, 0, TRANSFER_SIZE);
-            if (spi_send_packet(t, tx_buf, rx_buf, expected_rx_buf, switch_id) != 0)
-            {
-                ESP_LOGE(COMM_TAG, "FSM_COMPLETE: SPI DATA packet verification failed.");
-                state = FSM_ERROR;
-            }
-            spi_send_packet_clear(t, tx_buf, rx_buf, switch_id); 
-            // switch_id = -1; 
+            ESP_LOGI(COMM_TAG, "Transaction complete! Total data received: %u bytes", received_data);
+            if (!ignore) { 
+                memset(tx_buf, 0, TRANSFER_SIZE);
+                if (spi_send_packet(t, tx_buf, rx_buf, expected_rx_buf, switch_id) != 0)
+                {
+                    ESP_LOGE(COMM_TAG, "FSM_COMPLETE: SPI DATA packet verification failed.");
+                    state = FSM_ERROR;
+                }
+                spi_send_packet_clear(t, tx_buf, rx_buf, switch_id); 
+            } 
         } 
         
         if (state == FSM_ERROR) {
+            ESP_LOGW(COMM_TAG, "Way = %d", switch_id);
             previous_spi_packet = 0;
             memset(tx_buf, 0, TRANSFER_SIZE);
             tx_buf[0] = PACKET_TYPE_FUC;
-            tx_buf[1] = (switch_id == -1) ? 0xFF : 0x00;
             if (send(sock, &tx_buf[0], 1, 0) < 0)
             {
                 ESP_LOGE(COMM_TAG, "Failed to send END ACK");
@@ -1100,8 +1226,18 @@ static void tcp_server_task(void *pvParameters)
                 break;
             }
             spi_send_packet_clear(t, tx_buf, rx_buf, switch_id); 
-            ESP_LOGE(COMM_TAG, "Image transfer error occurred.");
-            // switch_id = -1; 
+            ESP_LOGE(COMM_TAG, "Error occurred.");
+        } else if (state == FSM_WAY_BUSY) { 
+            ESP_LOGW(COMM_TAG, "Way = %d", switch_id);
+            previous_spi_packet = 0; 
+            tx_buf[0] = PACKET_TYPE_WAY_BUSY;
+            if (send(sock, &tx_buf[0], 1, 0) < 0)
+            {
+                ESP_LOGE(COMM_TAG, "Failed to send WAY_BUSY");
+                state = FSM_ERROR;
+                break;
+            }
+            ESP_LOGW(COMM_TAG, "Way Busy.");
         }
 
         free(tx_buf);
@@ -1109,7 +1245,7 @@ static void tcp_server_task(void *pvParameters)
         free(expected_rx_buf);
         shutdown(sock, 0);
         close(sock);
-    } 
+    }
 
     close(listen_sock);
     vTaskDelete(NULL);
@@ -1276,17 +1412,13 @@ void ethernet_setup(void)
 
 void app_main(void)
 {
-    // esp_err_t sdret = SDCardInit(); 
-    // if (sdret != 0)
-    // {
-    //     ESP_LOGE(COMM_TAG, "SDCARD INITIALIZATION FAILED!: %s", esp_err_to_name(sdret));
-    //     return;
-    //         }
-    // ESP_LOGI(COMM_TAG, "SDCARD INITIALIZED!");
+    configure_led(); 
+    led_off(); 
+    ESP_LOGW(COMM_TAG, "LED GPIO INITIALIZED!");
 
     ethernet_setup();
     vTaskDelay(2000 / portTICK_PERIOD_MS);
-    ESP_LOGI(ETH_TAG, "ETHERNET INITIALIZED!");
+    ESP_LOGW(ETH_TAG, "ETHERNET INITIALIZED!");
 
     esp_err_t ret = spi_master_init();
     if (ret != ESP_OK) {
@@ -1294,9 +1426,19 @@ void app_main(void)
         return;
     }
     handshake_init_master();
-    ESP_LOGI(COMM_TAG, "SPI MASTER INITIALIZED!");
+    ESP_LOGW(COMM_TAG, "SPI MASTER INITIALIZED!");
+
+    esp_err_t sdret = SDCardInit(); 
+    if (sdret != 0)
+    {
+        ESP_LOGE(COMM_TAG, "SDCARD INITIALIZATION FAILED!: %s", esp_err_to_name(sdret));
+        return;
+            }
+    ESP_LOGW(COMM_TAG, "SDCARD INITIALIZED!");
 
     xTaskCreate(tcp_server_task, "tcp_handler", 4096, NULL, 5, NULL);
-    ESP_LOGI(ETH_TAG, "TCP HANDLER INITIALIZED!");
+    ESP_LOGW(ETH_TAG, "TCP HANDLER INITIALIZED!");
+
+    way_flipper = 0; 
 }
 

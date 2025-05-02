@@ -186,37 +186,37 @@ async def run_simulation(duration=20.0):
 
     return start_real, times, q_lengths, ram_usage
 
-# ─── Run simulation and plot ───────────────────────────────────────────────────
-async def main():
-    start_real, times, q_lengths, ram_usage = await run_simulation()
+# # ─── Run simulation and plot ───────────────────────────────────────────────────
+# async def main():
+#     start_real, times, q_lengths, ram_usage = await run_simulation()
 
-    plt.figure(figsize=(10, 6))
-    plt.rcParams['axes.labelsize'] = 18 
-    plt.rcParams.update({
-        "text.usetex": False,
-        "font.family": "serif",
-        "font.serif": ["Computer Modern Roman"]
-    })
-    color_map = {"store":"green","fetch":"blue","compute":"orange","purge":"red"}
+#     plt.figure(figsize=(10, 6))
+#     plt.rcParams['axes.labelsize'] = 18 
+#     plt.rcParams.update({
+#         "text.usetex": False,
+#         "font.family": "serif",
+#         "font.serif": ["Computer Modern Roman"]
+#     })
+#     color_map = {"store":"green","fetch":"blue","compute":"orange","purge":"red"}
 
-    if canceled_markers:
-        x_thresh = canceled_markers[0] - start_real
-        plt.axvline(x_thresh, color='black', linestyle='--', label="RAM Threshold Crossed")
+#     if canceled_markers:
+#         x_thresh = canceled_markers[0] - start_real
+#         plt.axvline(x_thresh, color='black', linestyle='--', label="RAM Threshold Crossed")
 
-    for cmd, data in q_lengths.items():
-        c = color_map[cmd]
-        # use the same color for the line…
-        plt.plot(times, data, label=f"{cmd.upper()} Queue", color=c)
-        # …and later, for the markers, reuse c as well
-        xs = [(rt - start_real) for rt, c0 in scheduled_markers if c0 == cmd]
-        ys = [-1 * 1.05] * len(xs)
-        plt.scatter(xs, ys, marker='x', color=c, s=50, label=f"{cmd.upper()} Scheduled")
+#     for cmd, data in q_lengths.items():
+#         c = color_map[cmd]
+#         # use the same color for the line…
+#         plt.plot(times, data, label=f"{cmd.upper()} Queue", color=c)
+#         # …and later, for the markers, reuse c as well
+#         xs = [(rt - start_real) for rt, c0 in scheduled_markers if c0 == cmd]
+#         ys = [-1 * 1.05] * len(xs)
+#         plt.scatter(xs, ys, marker='x', color=c, s=50, label=f"{cmd.upper()} Scheduled")
 
-    plt.xlabel("Time (s)")
-    plt.ylabel("Queue Size")
-    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-    plt.tight_layout()
-    plt.show()
+#     plt.xlabel("Time (s)")
+#     plt.ylabel("Queue Size")
+#     plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+#     plt.tight_layout()
+#     plt.show()
 
 if __name__ == "__main__":
     asyncio.run(main())

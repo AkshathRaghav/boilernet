@@ -103,6 +103,7 @@ extern void ethernet_setup(void);
 #define PACKET_TYPE_MID_WRITE   0xA2
 #define PACKET_TYPE_END_WRITE   0xA3
 #define PACKET_TYPE_FUC   0xA4
+#define PACKET_TYPE_WAY_BUSY   0xA5
 
 #define PACKET_TYPE_START_READ 0xB0
 #define PACKET_TYPE_DATA_READ  0xB1
@@ -129,9 +130,14 @@ typedef enum {
     FSM_WAIT_START_COMPUTE, 
     FSM_WAIT_COMPUTE,    
     FSM_COMPLETE,
-    FSM_ERROR
+    FSM_ERROR, 
+    FSM_WAY_BUSY
 } fsm_state_t;
 
+
+// ##############################################################################
+
+#define LED_NUM 32 
 
 // ################################################################
 
@@ -178,3 +184,4 @@ static spi_device_handle_t switch_handles[NUM_SWITCH_NODES];
 
 // ################################################################
 
+extern uint8_t way_flipper; 

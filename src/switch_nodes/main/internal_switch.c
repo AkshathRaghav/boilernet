@@ -2,6 +2,31 @@
 
 // ##############################################################################
 
+void led_on() { 
+  vTaskDelay(pdMS_TO_TICKS(2));
+  gpio_set_level(LED_NUM, 1);  
+}
+
+
+void led_off() { 
+  vTaskDelay(pdMS_TO_TICKS(2));
+  gpio_set_level(LED_NUM, 0);  
+}
+
+static void configure_led(void)
+{
+    gpio_config_t led_conf = {
+        .pin_bit_mask = (1ULL << LED_NUM),   
+        .mode         = GPIO_MODE_OUTPUT,                
+        .pull_up_en   = GPIO_PULLUP_DISABLE,             
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,           
+        .intr_type    = GPIO_INTR_DISABLE,               
+    };
+    gpio_config(&led_conf);
+}
+
+// ##############################################################################
+
 void my_post_setup_cb(spi_slave_transaction_t *trans)
 {
     gpio_set_level(NETWORK_HANDSHAKE, 1);
@@ -316,6 +341,8 @@ void compute_fsm_process(FILE *sd_file,
         }
     }
 
+    sdcard_close(sd_file);
+
     vTaskDelay(pdMS_TO_TICKS(5000)); 
     *compute_start_tick = xTaskGetTickCount();
 
@@ -459,6 +486,7 @@ static void spi_handler_task(void *pvParameters) {
                 &compute_fsm_state,
                 &fsm_state);
             ESP_LOGW(COMM_TAG, "Compute FSM Completed!");
+            memset(tx_buf, 0, TRANSFER_SIZE);
 
             file_opened = 0; 
         }
@@ -477,6 +505,7 @@ static void spi_handler_task(void *pvParameters) {
             // ---------- Write FSM handling  ------------
             case PACKET_TYPE_START_WRITE:   
             {
+                led_on(); 
                 if (fsm_state != FSM_WAIT_START_WRITE)
                 {
                     ESP_LOGE(COMM_TAG, "Unexpected START packet received in state %d", fsm_state);
@@ -522,16 +551,6 @@ static void spi_handler_task(void *pvParameters) {
                 }
                 break;
             }
-            case PACKET_TYPE_MID_WRITE:
-            {
-                if (fsm_state != FSM_WAIT_DATA_WRITE) {
-                    ESP_LOGE(COMM_TAG, "MID packet received out of sequence");
-                    fsm_state = FSM_ERROR;
-                } else {
-                    ESP_LOGI(COMM_TAG, "MID packet received (ignored)");
-                }
-                break;
-            }
             case PACKET_TYPE_END_WRITE:
             {
                 if (fsm_state != FSM_WAIT_DATA_WRITE) {
@@ -558,6 +577,8 @@ static void spi_handler_task(void *pvParameters) {
             // ---------- Read FSM handling ------------
             case PACKET_TYPE_START_READ:
             {
+                led_on(); 
+
                 if (fsm_state != FSM_WAIT_START_WRITE) { // FSM_WAIT_START_WRITE is being used as an IDLE State here. Not the best logic lol.
                     ESP_LOGE(COMM_TAG, "Unexpected START_READ packet received in state %d", fsm_state);
                     fsm_state = FSM_ERROR;
@@ -665,6 +686,8 @@ static void spi_handler_task(void *pvParameters) {
             // ---------- Compute FSM handling ------------
             case PACKET_TYPE_START_COMPUTE:
             {
+                led_on(); 
+
                 if (fsm_state == FSM_WAIT_COMPUTE_PROCESS) { // dummy resend from network, acceptable mistake 
                     continue; 
                 }
@@ -700,10 +723,13 @@ static void spi_handler_task(void *pvParameters) {
 
                 compute_fsm_state = FSM_SEND_DATA_TO_BLADE;
                 fsm_state = FSM_WAIT_COMPUTE_PROCESS;
+                led_off(); 
                 break;
             }
             case PACKET_TYPE_POLL_COMPUTE:
             {
+                led_on(); 
+
                 if (fsm_state == FSM_WAIT_START_WRITE) continue; 
 
                 if (fsm_state != FSM_WAIT_COMPUTE_PROCESS) {
@@ -732,6 +758,8 @@ static void spi_handler_task(void *pvParameters) {
             // ---------- Delete FSM handling ------------
             case PACKET_TYPE_DELETE:
             {
+                led_on(); 
+
                 if (fsm_state != FSM_WAIT_START_WRITE) {
                     ESP_LOGE(COMM_TAG, "Unexpected DELETE packet in state %d", fsm_state);
                     fsm_state = FSM_ERROR;
@@ -789,6 +817,7 @@ static void spi_handler_task(void *pvParameters) {
 
         // ##########################################################
         if (fsm_state == FSM_COMPLETE) {
+            led_off();
             computed_checksum = 0;
             if (sd_file != NULL) {
                 sdcard_close(sd_file);
@@ -797,8 +826,8 @@ static void spi_handler_task(void *pvParameters) {
             memset(filename, 0, sizeof(filename));
             ESP_LOGI(COMM_TAG, "FSM completed successfully. Ready for next transaction.");
             fsm_state = FSM_WAIT_START_WRITE;
-        } else if (fsm_state == FSM_ERROR)
-        {
+        } else if (fsm_state == FSM_ERROR) {
+            led_off();
             ESP_LOGE(COMM_TAG, "FSM encountered an error. Cleaning up and resetting.");
             if (sd_file != NULL) {
                 sdcard_close(sd_file);
@@ -811,7 +840,9 @@ static void spi_handler_task(void *pvParameters) {
             memset(filename, 0, sizeof(filename));
         }
 
-        count = (count == 1) ? 0 : 1;
+        if (fsm_state == FSM_WAIT_START_WRITE) led_off(); 
+
+        count = (count) ? 0 : 1;
     }
 }
 
@@ -821,13 +852,24 @@ static void spi_handler_task(void *pvParameters) {
 void app_main(void)
 {
 
+    configure_led(); 
+    led_off(); 
+    ESP_LOGW(COMM_TAG, "LED GPIO INITIALIZED!");
+
     esp_err_t sdret = SDCardInit(); 
     if (sdret != 0)
     {
         ESP_LOGE(COMM_TAG, "SDCARD INITIALIZATION FAILED!: %s", esp_err_to_name(sdret));
         return;
     }
-    ESP_LOGI(COMM_TAG, "SDCARD INITIALIZED!");
+    ESP_LOGW(COMM_TAG, "SDCARD INITIALIZED!");
+
+    if (compute_spi_master_init() != ESP_OK) {
+        ESP_LOGI(COMM_TAG, "Failed to init compute SPI master");
+        return;
+    }
+    setup_compute_handshake_gpios();
+    ESP_LOGW(COMM_TAG, "COMPUTE GPIOs INITIALIZED!");
 
     esp_err_t ret = spi_slave_init(); 
     if (ret != ESP_OK)
@@ -835,16 +877,8 @@ void app_main(void)
         ESP_LOGE(COMM_TAG, "SPI SLAVE INITIALIZATION FAILED!: %s", esp_err_to_name(ret));
         return;
     }
-    ESP_LOGI(COMM_TAG, "SPI SLAVE INITIALIZED!");
+    ESP_LOGW(COMM_TAG, "SPI SLAVE INITIALIZED!");
 
     xTaskCreate(spi_handler_task, "spi_handler", 4096, NULL, 5, NULL);
-    ESP_LOGI(COMM_TAG, "SPI HANDLER INITIALIZED!");
-    
-    if (compute_spi_master_init() != ESP_OK) {
-        ESP_LOGI(COMM_TAG, "Failed to init compute SPI master");
-        return;
-    }
-    setup_compute_handshake_gpios();
-    ESP_LOGI(COMM_TAG, "COMPUTE GPIOs INITIALIZED!");
-
+    ESP_LOGW(COMM_TAG, "SPI HANDLER INITIALIZED!");
 }

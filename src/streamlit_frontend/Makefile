@@ -12,7 +12,6 @@ venv:
 setup: venv
 	$(PIP) install -r requirements.txt
 
-run:
-	venv
+run: venv
 	$(STREAMLIT) run $(APP_FILE) --server.port=8501
 

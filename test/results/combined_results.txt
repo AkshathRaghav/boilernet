@@ -1,4 +1,3 @@
-0: {"pred":"Poodle","time":8938,"scores":{"German Shepherd":-81.000,"Labrador Retriever":-97.000,"Pug":-84.000,"Chihuahua":-93.000,"Poodle":-30.000}}
-1: {"pred":"Lion","time":8240,"scores":{"Lion":-64.000,"Persian":-64.000,"Egyptian":-64.000,"Bear":-64.000,"Baboon":-128.000}}
-2: {"pred":"Strawberry","time":8938,"scores":{"Banana":-128.000,"Strawberry":-43.000,"Pineapple":-43.000,"Orange":-43.000,"Custard Apple":-128.000}}
-3: FAILED
+0: {"pred":"Banana","time":9068,"scores":{"Banana":0.199,"Strawberry":0.199,"Pineapple":0.199,"Orange":0.199,"Custard Apple":0.199}}
+1: {"pred":"Strawberry","time":9051,"scores":{"Banana":0.000,"Strawberry":0.250,"Pineapple":0.250,"Orange":0.250,"Custard Apple":0.250}}
+2: {"pred":"Banana","time":9051,"scores":{"Banana":0.199,"Strawberry":0.199,"Pineapple":0.199,"Orange":0.199,"Custard Apple":0.199}}
