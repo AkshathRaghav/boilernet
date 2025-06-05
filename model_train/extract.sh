@@ -1,4 +1,7 @@
 #!/bin/bash
+
+# TAKEN FROM -- https://gist.github.com/BIGBALLON/8a71d225eff18d88e469e6ea9b39cef4
+
 #
 # script to extract ImageNet dataset
 # ILSVRC2012_img_train.tar (about 138 GB)

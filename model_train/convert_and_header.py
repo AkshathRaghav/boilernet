@@ -1,9 +1,9 @@
 import os
 import argparse
 import tensorflow as tf
+from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 
 def representative_data_gen(data_dir, subset_synsets, image_size, num_samples=100):
-    """Yields representative samples for INT8 quantization from the specified subset."""
     image_paths = []
     for syn in subset_synsets:
         syn_dir = os.path.join(data_dir, "train", syn)
@@ -11,14 +11,15 @@ def representative_data_gen(data_dir, subset_synsets, image_size, num_samples=10
             for f in os.listdir(syn_dir):
                 if f.lower().endswith(('.jpg', '.jpeg', '.png')):
                     image_paths.append(os.path.join(syn_dir, f))
-    # Limit to num_samples
     image_paths = image_paths[:num_samples]
 
     def preprocess(path):
         img = tf.io.read_file(path)
         img = tf.image.decode_image(img, channels=3)
         img = tf.image.resize(img, [image_size, image_size])
-        img = tf.cast(img, tf.float32) / 255.0
+        img = tf.cast(img, tf.float32)
+        img = tf.cast(img, tf.float32)
+        img = preprocess_input(img) 
         return img
 
     for path in image_paths:

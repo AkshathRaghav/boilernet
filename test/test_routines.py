@@ -58,7 +58,7 @@ def recvall(sock: socket.socket, n: int) -> bytes:
         buf.extend(chunk)
     return bytes(buf)
 
-def wait_for_ack(sock: socket.socket, exp_type: int, timeout: float=5.0) -> int:
+def wait_for_ack(sock: socket.socket, exp_type: int, timeout: float=15.0) -> int:
     sock.settimeout(timeout)
     start = time.perf_counter()
     try:
@@ -306,9 +306,9 @@ def main():
 if __name__=="__main__":
     main()
 
-# Even if it's a JPG, or JPEG, we convert it into PNG. 
-    # python3 test_routines.py combined.png write 
-    # python3 test_routines.py combined.png read 
-    # python3 test_routines.py combined.png compute 
-    # python3 test_routines.py combined.png compute_poll 
-    # python3 test_routines.py combined.png delete 
+    # python3 test_routines.py send_file_3.png write 
+    # python3 test_routines.py send_file_3.png read 
+    # python3 test_routines.py send_file_3.png compute 
+    # python3 test_routines.py send_file_3.png compute_poll 
+    # python3 test_routines.py send_file_3_results.txt compute_poll 
+    # python3 test_routines.py send_file_3.png delete 

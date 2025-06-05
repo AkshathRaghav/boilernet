@@ -7,7 +7,7 @@ const char* model_labels[NUM_CLASSES] = {
   "Persian",
   "Egyptian",
   "Bear",
-  "Baboon"
+  "Garfield"
 };
 
 const unsigned char model_tflite[] = {

@@ -1,8 +1,0 @@
-# model_train/BUILD
-
-exports_files([
-    "flow_defs.bzl",
-    "extract_imagenet.sh",
-    "train.py",
-    "convert_header.py",
-])

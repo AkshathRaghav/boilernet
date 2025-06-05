@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-"""
-inference.py
-
-Run INT8 TFLite inference with proper quantization handling,
-using MobileNetV2-style preprocessing and printing raw vs. dequantized outputs.
-"""
 
 import os
 import argparse
@@ -12,7 +6,6 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 
-# ─── subset → synset map (same as your convert.py) ────────────────────────────────
 OBJECT_SUBSETS = {
     "dogs": [
         "n02106662",  # German shepherd
@@ -80,11 +73,9 @@ def run_inference(
     image_size,
     top_k=3
 ):
-    # Load interpreter
     interpreter = tf.lite.Interpreter(model_path=tflite_model_path)
     interpreter.allocate_tensors()
 
-    # Get quantization details
     input_det  = interpreter.get_input_details()[0]
     output_det = interpreter.get_output_details()[0]
     scale_in, zp_in   = input_det["quantization"]
@@ -95,26 +86,14 @@ def run_inference(
           f" output dtype={output_det['dtype']}, scale={scale_out}, zero_pt={zp_out}\n")
 
     for img_path in image_paths:
-        # 1) load + preprocess → float32 [–1,1]
         img = load_and_preprocess(img_path, image_size)[None, ...]  # add batch dim
-
-        # 2) float → int8
         int8_input = np.round(img / scale_in + zp_in).astype(np.int8)
-
-        # 3) run
         interpreter.set_tensor(input_det["index"], int8_input)
         interpreter.invoke()
-
-        # 4) pull raw int8 logits
         raw_out = interpreter.get_tensor(output_det["index"])[0]  # shape [num_classes]
-
-        # 5) dequantize → float logits
         logits = (raw_out.astype(np.float32) - zp_out) * scale_out
-
-        # 6) softmax
         probs = tf.nn.softmax(logits).numpy()
 
-        # 7) display
         top_idxs = np.argsort(probs)[::-1][:top_k]
         print(f"\nImage: {os.path.basename(img_path)}")
         print(" Raw quantized output:", raw_out.tolist())

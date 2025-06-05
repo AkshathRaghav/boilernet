@@ -1,7 +1,6 @@
 # list_ops.py
 import pathlib
 import flatbuffers
-# import the generated Python modules for the TFLite schema
 import tflite.Model as Model
 import tflite.BuiltinOperator as BuiltinOp
 
@@ -16,7 +15,6 @@ def list_ops(tflite_file):
         if builtin == BuiltinOp.CUSTOM:
             name = op_code.CustomCode().decode('utf-8')
         else:
-            # get the enum name for this builtin code
             name = BuiltinOp.EnumName(builtin)
         ops.add(name)
     print("Operators in model:")

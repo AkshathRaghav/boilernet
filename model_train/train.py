@@ -8,7 +8,6 @@ import logging
 import tensorflow as tf
 from tensorflow.keras import layers, models, callbacks, optimizers
 
-# ─── YOUR SUBSET DEFINITIONS ──────────────────────────────────────────────────
 object_subsets = {
     "dogs": [
         "n02106662",  # German shepherd
@@ -47,7 +46,6 @@ object_subsets = {
     ]
 }
 
-# ─── Backbone Registry ────────────────────────────────────────────────────────
 BACKBONES = {
     "mobilenet_v2": (
         tf.keras.applications.MobileNetV2,
@@ -66,7 +64,6 @@ BACKBONES = {
     )
 }
 
-# ─── Data Loading for a Single Subset ─────────────────────────────────────────
 def make_subset_dataset(data_root, subset_name, split, image_size, batch_size,
                         preprocess_fn, training):
     synsets = object_subsets[subset_name]
@@ -87,7 +84,6 @@ def make_subset_dataset(data_root, subset_name, split, image_size, batch_size,
         img = tf.image.decode_jpeg(img, channels=3)
         img = tf.image.resize(img, [image_size, image_size])
         img = tf.cast(img, tf.float32)
-        # backbone‑specific preprocessing
         img = preprocess_fn(img)
         return img, label
 
@@ -106,10 +102,8 @@ def make_subset_dataset(data_root, subset_name, split, image_size, batch_size,
     ds = ds.batch(batch_size).prefetch(tf.data.AUTOTUNE)
     return ds
 
-# ─── Model Builder ───────────────────────────────────────────────────────────
 def build_model(backbone_name, input_shape, num_classes):
     Backbone, preprocess_fn, kwargs = BACKBONES[backbone_name]
-    # instantiate backbone
     base = Backbone(
         input_shape=input_shape,
         include_top=False,
@@ -126,7 +120,6 @@ def build_model(backbone_name, input_shape, num_classes):
     model = models.Model(inputs, outputs, name=f"{backbone_name}_subset")
     return model, base, preprocess_fn
 
-# ─── Training Entry Point ────────────────────────────────────────────────────
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--data_dir",    required=True,

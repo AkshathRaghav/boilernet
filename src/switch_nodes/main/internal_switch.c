@@ -172,13 +172,9 @@ esp_err_t compute_spi_master_init(void)
         devcfg.spics_io_num = compute_cs_pins[i];
         esp_err_t ret = spi_bus_add_device(SD_HOST, &devcfg, &compute_handles[i]);
         if (ret != ESP_OK) {
-            ESP_LOGW(COMM_TAG,
-                     "Blade %d not registered (CS pin %d): %s",
-                     i, compute_cs_pins[i], esp_err_to_name(ret));
+            ESP_LOGW(COMM_TAG,                      "Blade %d not registered (CS pin %d): %s",                      i, compute_cs_pins[i], esp_err_to_name(ret));
         } else {
-            ESP_LOGI(COMM_TAG,
-                     "Blade %d registered on CS pin %d",
-                     i, compute_cs_pins[i]);
+            ESP_LOGI(COMM_TAG,                      "Blade %d registered on CS pin %d",                      i, compute_cs_pins[i]);
         }
     }
     return ESP_OK;
@@ -208,14 +204,10 @@ int find_available_compute_blades(void)
         if (lvl) {
             count++;
         } else {
-            ESP_LOGW(COMM_TAG,
-                     "Blade %d not responding (HS pin %d low)",
-                     i, compute_handshake_pins[i]);
+            ESP_LOGW(COMM_TAG,                      "Blade %d not responding (HS pin %d low)",                      i, compute_handshake_pins[i]);
         }
     }
-    ESP_LOGI(COMM_TAG,
-             "%d/%d compute blades available",
-             count, NUM_COMPUTE_BLADES);
+    ESP_LOGI(COMM_TAG,              "%d/%d compute blades available",              count, NUM_COMPUTE_BLADES);
     return count;
 }
 
@@ -372,9 +364,7 @@ void compute_fsm_process(FILE *sd_file,
         
         vTaskDelay(pdMS_TO_TICKS(1)); 
 
-        ESP_LOGI(COMM_TAG, "%d: Received buffer; first bytes: 0x%02X 0x%02X 0x%02X 0x%02X ... 0x%02X 0x%02X", 
-                 count, rx_buf[0], rx_buf[1], rx_buf[2], rx_buf[3], 
-                 rx_buf[TRANSFER_SIZE - 2], rx_buf[TRANSFER_SIZE - 1]);
+        ESP_LOGI(COMM_TAG, "%d: Received buffer; first bytes: 0x%02X 0x%02X 0x%02X 0x%02X ... 0x%02X 0x%02X",                   count, rx_buf[0], rx_buf[1], rx_buf[2], rx_buf[3],                  rx_buf[TRANSFER_SIZE - 2], rx_buf[TRANSFER_SIZE - 1]);
 
         int data_len = (rx_buf[1] << 8) | rx_buf[2];
         if (data_len <= 0 || data_len > max_payload) {
@@ -445,9 +435,7 @@ static void spi_handler_task(void *pvParameters) {
     while (1) {
         memset(rx_buf, 0, TRANSFER_SIZE);
 
-        ESP_LOGI(COMM_TAG, "%d: Sent buffer; first bytes: 0x%02X 0x%02X 0x%02X 0x%02X ... 0x%02X 0x%02X", 
-                 count, tx_buf[0], tx_buf[1], tx_buf[2], tx_buf[3], 
-                 tx_buf[TRANSFER_SIZE - 2], tx_buf[TRANSFER_SIZE - 1]);
+        ESP_LOGI(COMM_TAG, "%d: Sent buffer; first bytes: 0x%02X 0x%02X 0x%02X 0x%02X ... 0x%02X 0x%02X",  count, tx_buf[0], tx_buf[1], tx_buf[2], tx_buf[3],  tx_buf[TRANSFER_SIZE - 2], tx_buf[TRANSFER_SIZE - 1]);
                  
         t_recv.tx_buffer = tx_buf;
         t_recv.rx_buffer = rx_buf;
@@ -459,9 +447,7 @@ static void spi_handler_task(void *pvParameters) {
         }
 
 
-        ESP_LOGI(COMM_TAG, "%d: Received buffer; first bytes: 0x%02X 0x%02X 0x%02X 0x%02X ... 0x%02X 0x%02X", 
-                 count, rx_buf[0], rx_buf[1], rx_buf[2], rx_buf[3], 
-                 rx_buf[TRANSFER_SIZE - 2], rx_buf[TRANSFER_SIZE - 1]);
+        ESP_LOGI(COMM_TAG, "%d: Received buffer; first bytes: 0x%02X 0x%02X 0x%02X 0x%02X ... 0x%02X 0x%02X",                   count, rx_buf[0], rx_buf[1], rx_buf[2], rx_buf[3],                   rx_buf[TRANSFER_SIZE - 2], rx_buf[TRANSFER_SIZE - 1]);
 
         // ##########################################################
         
@@ -560,8 +546,7 @@ static void spi_handler_task(void *pvParameters) {
                     // Byte 0: packet type, Byte 1: CHECK_BYTE, Bytes [2-5]: checksum (big-endian)
                     unsigned int received_checksum = (rx_buf[2] << 24) | (rx_buf[3] << 16) |
                                                      (rx_buf[4] << 8)  | rx_buf[5];
-                    ESP_LOGI(COMM_TAG, "END packet received. Received checksum: 0x%08X, Computed checksum: 0x%08X",
-                             received_checksum, computed_checksum);
+                    ESP_LOGI(COMM_TAG, "END packet received. Received checksum: 0x%08X, Computed checksum: 0x%08X",                              received_checksum, computed_checksum);
                     if (received_checksum != computed_checksum) {
                         ESP_LOGE(COMM_TAG, "Checksum mismatch");
                         fsm_state = FSM_ERROR;
