@@ -16,6 +16,10 @@ This project aimed to develop a Network Attached Storage utilizing ESP32 MCUs. T
 
 > Our reports/presentations are linked in the [/docs](./docs/). They contain in-depth views, reasonings and explanations regarding the design and its motivation. We also outline how we tested and ensured functionality. **This repository is just meant to help anyone who wishes to "refer" to our code/designs for their own use-case.**
 
+<div align="center">
+<iframe width="600" height="450" src="https://www.youtube.com/embed/jUlh9KClEwE" title="BoilerNet Overview + Demo -  Senior Design Award - ECE 49022 Spring &#39;25 - Purdue" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+</div>
+
 <div style="display: flex; justify-content: center; align-items: center; gap: 1rem;">
   <img src="./assets/top_level.png" alt="logo" style="width: 60%;" />
   <img src="./assets/top_level_system.png" alt="people" style="width: 30%;" />
