@@ -16,12 +16,11 @@ This project aimed to develop a Network Attached Storage utilizing ESP32 MCUs. T
 
 > Our reports/presentations are linked in the [/docs](./docs/). They contain in-depth views, reasonings and explanations regarding the design and its motivation. We also outline how we tested and ensured functionality. **This repository is just meant to help anyone who wishes to "refer" to our code/designs for their own use-case.**
 
-[![Video: jUlh9KClEwE](https://img.youtube.com/vi/jUlh9KClEwE/0.jpg)](https://www.youtube.com/watch?v=jUlh9KClEwE)
+> Watch the Demo that won us the "Senior Design Award" for Spring '25 through Purdue ECE: [Link](https://www.youtube.com/watch?v=jUlh9KClEwE)!
 
-
-<div style="display: flex; justify-content: center; align-items: center; gap: 0.2rem;">
-  <img src="./assets/top_level.png" alt="logo" style="width: 40%;" />
-  <img src="./assets/top_level_system.png" alt="people" style="width: 40%;" />
+<div style="display: flex; justify-content: center; align-items: center; gap: 1rem;">
+  <img src="./assets/top_level.png" alt="logo" style="width: 60%;" />
+  <img src="./assets/top_level_system.png" alt="people" style="width: 30%;" />
 </div>
 <div class="caption" align="center">
     Top Level System Diagrams
