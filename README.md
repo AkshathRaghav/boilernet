@@ -17,8 +17,8 @@ This project aimed to develop a Network Attached Storage utilizing ESP32 MCUs. T
 > Our reports/presentations are linked in the [/docs](./docs/). They contain in-depth views, reasonings and explanations regarding the design and its motivation. We also outline how we tested and ensured functionality. **This repository is just meant to help anyone who wishes to "refer" to our code/designs for their own use-case.**
 
 <div style="display: flex; justify-content: center; align-items: center; gap: 1rem;">
-  <img src="./assets/top_level.png" alt="logo" style="width: 50%;" />
-  <img src="./assets/top_level_system.png" alt="people" style="width: 50%;" />
+  <img src="./assets/top_level.png" alt="logo" style="width: 60%;" />
+  <img src="./assets/top_level_system.png" alt="people" style="width: 30%;" />
 </div>
 <div class="caption" align="center">
     Top Level System Diagrams
@@ -32,7 +32,7 @@ The physical enclosure consists of six piece types, along with an optional divid
 
 
 <div align="center">
-  <img src="./assets/mechanical_first.png" alt="first" style="width: 50%;"/>
+  <img src="./assets/mechanical_first.png" alt="first" style="width: 70%;"/>
   <caption> 
 </div>
 <div class="caption" align="center">
@@ -40,7 +40,7 @@ The physical enclosure consists of six piece types, along with an optional divid
 </div>
 
 <div align="center">
-  <img src="./assets/second.drawio.png" alt="second" style="width: 60%;"/>
+  <img src="./assets/second.drawio.png" alt="second" style="width: 80%;"/>
 </div>
 <div class="caption" align="center">
     Top Enclosure
@@ -54,7 +54,7 @@ The physical enclosure consists of six piece types, along with an optional divid
 </div>
 
 <div align="center">
-  <img src="./assets/Slide6.jpg" alt="third" style="width: 60%;"/>
+  <img src="./assets/Slide6.jpg" alt="third" style="width: 75%;"/>
 </div>
 <div class="caption" align="center">
     Assembled System!
@@ -66,14 +66,14 @@ This was our first time working on PCB Design, and had a few fly-wires hanging a
 
 
 <div align="center">
-  <img src="./assets/pcb_network.png" alt="third" style="width: 60%;"/>
+  <img src="./assets/pcb_network.png" alt="third" style="width: 80%;"/>
 </div>
 <div class="caption" align="center">
     Network/Switch PCB
 </div>
 
 <div align="center">
-  <img src="./assets/pcb_compute.png" alt="third" style="width: 60%;"/>
+  <img src="./assets/pcb_compute.png" alt="third" style="width: 80%;"/>
 </div>
 <div class="caption" align="center">
     Compute Node PCB
