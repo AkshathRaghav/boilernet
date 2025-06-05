@@ -528,8 +528,7 @@ int fsm_file_read_master(int sock, spi_transaction_t t, uint8_t *dummy_tx_buf, u
             // [Packet Type (1 byte)] [Checksum (4 bytes)]
             unsigned int slave_checksum = (rx_buf[1] << 24) | (rx_buf[2] << 16) |
                                       (rx_buf[3] << 8) | rx_buf[4];
-            ESP_LOGI(COMM_TAG, "END_READ packet: Slave checksum = 0x%08X, Computed checksum = 0x%08X",
-                     slave_checksum, computed_checksum);
+            ESP_LOGI(COMM_TAG, "END_READ packet: Slave checksum = 0x%08X, Computed checksum = 0x%08X", slave_checksum, computed_checksum);
                     
             if (rx_buf[1] == 0xFF) {
                 char result_filename[100] = {0};
@@ -1009,6 +1008,20 @@ static void tcp_server_task(void *pvParameters)
 
                     ESP_LOGI(COMM_TAG, "Polling slave for compute status.");
 
+                    ESP_LOGW(COMM_TAG, "Way: %d, Handshake: %d", switch_id, gpio_get_level(switch_handshake_pins[switch_id]));
+
+                    if (!gpio_is_high(switch_handshake_pins[switch_id])) { 
+                        tx_buf[0] = PACKET_TYPE_WAIT_COMPUTE; 
+                        ESP_LOGI(COMM_TAG, "Slave indicates compute is still in progress. 1");
+                        if (send(sock, tx_buf, 1, 0) < 0) {
+                            ESP_LOGE(COMM_TAG, "Failed to forward WAIT_COMPUTE to router.");
+                            state = FSM_ERROR;
+                        }
+                        state = FSM_COMPLETE;
+                        ignore = 1;
+                        break;
+                    }
+
                     tx_buf[0] = PACKET_TYPE_POLL_COMPUTE;
                     if (spi_send_packet(t, tx_buf, rx_buf, NULL, switch_id) != 0) {
                         ESP_LOGE(COMM_TAG, "SPI POLL_COMPUTE transaction failed.");
@@ -1029,15 +1042,32 @@ static void tcp_server_task(void *pvParameters)
                             }
                             state = FSM_ERROR;
                         } else {
-                            ESP_LOGI(COMM_TAG, "Compute complete; slave returning END_COMPUTE with flag: 0x%02X", flag);
-                            if (send(sock, rx_buf, 2, 0) < 0) {
+                            ESP_LOGI(COMM_TAG, "c; slave returning END_COMPUTE with flag: 0x%02X - 1", flag);
+                            compute_ids[switch_id] = 0; 
+                            if (send(sock, rx_buf, 2, 0) < 0)
+                            {
                                 ESP_LOGE(COMM_TAG, "Failed to forward END_COMPUTE to router.");
                                 state = FSM_ERROR;
-                            } else {
+                            }
+                            else
+                            {
                                 state = FSM_COMPLETE;
                             }
                         }
                         break;
+                    }
+
+                    if (!gpio_is_high(switch_handshake_pins[switch_id])) { 
+                        tx_buf[0] = PACKET_TYPE_WAIT_COMPUTE; 
+                        ESP_LOGI(COMM_TAG, "Slave indicates compute is still in progress. 2");
+                        if (send(sock, tx_buf, 1, 0) < 0) {
+                            ESP_LOGE(COMM_TAG, "Failed to forward WAIT_COMPUTE to router.");
+                            state = FSM_ERROR;
+                        }
+                        state = FSM_COMPLETE;
+                        ignore = 1; 
+                        break;
+
                     }
 
                     tx_buf[0] = PACKET_TYPE_POLL_COMPUTE;
@@ -1049,12 +1079,16 @@ static void tcp_server_task(void *pvParameters)
 
                     uint8_t poll_response = rx_buf[0];
                     if (poll_response == PACKET_TYPE_WAIT_COMPUTE) {
-                        ESP_LOGI(COMM_TAG, "Slave indicates compute is still in progress.");
+                        ESP_LOGI(COMM_TAG, "Slave indicates compute is still in progress. 3");
                         if (send(sock, rx_buf, 1, 0) < 0) {
                             ESP_LOGE(COMM_TAG, "Failed to forward WAIT_COMPUTE to router.");
                             state = FSM_ERROR;
                         }
-                    } else if (poll_response == PACKET_TYPE_END_COMPUTE) {
+                        state = FSM_COMPLETE;
+                        ignore = 1; 
+                    }
+                    else if (poll_response == PACKET_TYPE_END_COMPUTE)
+                    {
                         uint8_t flag = rx_buf[1];
                         if (flag == 0xFF) {
                             ESP_LOGE(COMM_TAG, "Slave reports compute error during polling: no such file (flag 0xFF).");
@@ -1063,21 +1097,29 @@ static void tcp_server_task(void *pvParameters)
                             }
                             state = FSM_ERROR;
                         } else {
-                            ESP_LOGI(COMM_TAG, "Compute complete; slave returning END_COMPUTE with flag: 0x%02X", flag);
+                            ESP_LOGI(COMM_TAG, "Compute complete; slave returning END_COMPUTE with flag: 0x%02X - 2", flag);
+                            compute_ids[switch_id] = 0; 
                             if (send(sock, rx_buf, 2, 0) < 0) {
                                 ESP_LOGE(COMM_TAG, "Failed to forward END_COMPUTE to router.");
                                 state = FSM_ERROR;
                             } else {
                                 state = FSM_COMPLETE;
                             }
-                            compute_ids[switch_id] = 0; 
                         }
-                    } else if (poll_response == PACKET_TYPE_FUC) {
+                    }
+                    else if (poll_response == PACKET_TYPE_FUC)
+                    {
                         ESP_LOGE(COMM_TAG, "Slave returned FUC during compute polling.");
                         state = FSM_ERROR;
-                    } else if (poll_response == 0x00) { 
+                    }
+                    else if (poll_response == 0x00)
+                    {
                         ESP_LOGE(COMM_TAG, "Compute not in progress! Slave returned 0x00");
-                    } else {
+                        state = FSM_WAIT_START_WRITE;
+                        ignore = 1; 
+                    }
+                    else
+                    {
                         ESP_LOGE(COMM_TAG, "Unexpected slave response during compute polling: 0x%02X", poll_response);
                         state = FSM_ERROR;
                     }
@@ -1260,8 +1302,7 @@ static void eth_event_handler(void *arg, esp_event_base_t event_base, int32_t ev
     case ETHERNET_EVENT_CONNECTED:
         esp_eth_ioctl(eth_handle, ETH_CMD_G_MAC_ADDR, mac_addr);
         ESP_LOGI(ETH_TAG, "Ethernet Link Up");
-        ESP_LOGI(ETH_TAG, "Ethernet HW Addr %02x:%02x:%02x:%02x:%02x:%02x",
-                 mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+        ESP_LOGI(ETH_TAG, "Ethernet HW Addr %02x:%02x:%02x:%02x:%02x:%02x",                  mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
         
         break;
     case ETHERNET_EVENT_DISCONNECTED:
@@ -1439,6 +1480,6 @@ void app_main(void)
     xTaskCreate(tcp_server_task, "tcp_handler", 4096, NULL, 5, NULL);
     ESP_LOGW(ETH_TAG, "TCP HANDLER INITIALIZED!");
 
-    way_flipper = 0; 
+    way_flipper = 1; 
 }
 
