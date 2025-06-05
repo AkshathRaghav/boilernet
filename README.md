@@ -62,7 +62,9 @@ The physical enclosure consists of six piece types, along with an optional divid
 
 ## PCB Design
 
-This was our first time working on PCB Design, and had a few fly-wires hanging about. Reach out to [Gautam Nambiar](https://www.linkedin.com/in/gautam-nambiar-821479251/) and [Gokul Harikrishnan](https://www.linkedin.com/in/gokulkrishnan-harikrishnan-40334b227/) if you have any questions. Below is one of the slides we usd in our [Final Presentation]() to sound endearing ;)
+This was our first time working on PCB Design, and had a few fly-wires hanging about. Below is one of the slides we usd in our [Final Presentation](/docs/Final%20Design%20Review.pdf) to sound endearing ;)
+
+You can find our PCB Designs at [/gerbers/](./gerbers/) and [/kicad_projects](./kicad_projects/)! Reach out to [Gautam Nambiar](https://www.linkedin.com/in/gautam-nambiar-821479251/) and [Gokul Harikrishnan](https://www.linkedin.com/in/gokulkrishnan-harikrishnan-40334b227/) if you have any questions.
 
 
 <div align="center">
@@ -77,6 +79,13 @@ This was our first time working on PCB Design, and had a few fly-wires hanging a
 </div>
 <div class="caption" align="center">
     Compute Node PCB
+</div>
+
+<div align="center">
+  <img src="./assets/slide.png" alt="third" style="width: 80%;"/>
+</div>
+<div class="caption" align="center">
+    Mishaps/Learnings!
 </div>
 
 ## Software 
